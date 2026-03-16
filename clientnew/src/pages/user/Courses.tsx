@@ -14,11 +14,11 @@ interface Course {
   qualification?: string;
   duration?: string;
   category?: string;
-  courseType?: "full-time" | "part-time" | "internship";
+  courseType?: "full-time" | "part-time" | "online" | "offline";
   paymentType?: "paid" | "unpaid";
 }
 
-const COURSE_TYPE_OPTIONS = ["full-time", "part-time", "internship"];
+const COURSE_TYPE_OPTIONS = ["full-time", "part-time", "online", "offline"];
 const PAYMENT_TYPE_OPTIONS = ["paid", "unpaid"];
 
 const STANDARD_CATEGORIES = [
