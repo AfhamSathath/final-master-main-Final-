@@ -13,11 +13,19 @@ interface Job {
   openDate?: string;
   closeDate?: string;
   category?: string;
+  positionType?: "full-time" | "part-time" | "internship";
+  paymentType?: "paid" | "unpaid";
 }
+
+const POSITION_TYPE_OPTIONS = ["full-time", "part-time", "internship"];
+const PAYMENT_TYPE_OPTIONS = ["paid", "unpaid"];
 
 const JobPage: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [positionType, setPositionType] = useState("");
+  const [paymentType, setPaymentType] = useState("");
   const navigate = useNavigate();
 
   const API_BASE_URL = "http://localhost:5000/api/jobs";
@@ -28,7 +36,12 @@ const JobPage: React.FC = () => {
     const token = localStorage.getItem("token");
 
     try {
-      const res = await fetch(API_BASE_URL, {
+      const url = new URL(API_BASE_URL);
+      if (searchTerm) url.searchParams.append("search", searchTerm);
+      if (positionType) url.searchParams.append("positionType", positionType);
+      if (paymentType) url.searchParams.append("paymentType", paymentType);
+
+      const res = await fetch(url.toString(), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) throw new Error("Failed to fetch jobs");
@@ -41,7 +54,7 @@ const JobPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [searchTerm, positionType, paymentType]);
 
   useEffect(() => {
     fetchJobs();
@@ -96,6 +109,50 @@ const JobPage: React.FC = () => {
         </p>
       </div>
 
+      <div className="max-w-6xl mx-auto mb-6 flex flex-wrap gap-3 justify-center">
+        <input
+          type="text"
+          placeholder="Search jobs..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="border rounded-lg px-3 py-2 w-full sm:w-64"
+        />
+        <select
+          value={positionType}
+          onChange={(e) => setPositionType(e.target.value)}
+          className="border rounded-lg px-3 py-2 w-full sm:w-44"
+        >
+          <option value="">All Types</option>
+          {POSITION_TYPE_OPTIONS.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+        <select
+          value={paymentType}
+          onChange={(e) => setPaymentType(e.target.value)}
+          className="border rounded-lg px-3 py-2 w-full sm:w-44"
+        >
+          <option value="">All Payments</option>
+          {PAYMENT_TYPE_OPTIONS.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => {
+            setSearchTerm("");
+            setPositionType("");
+            setPaymentType("");
+          }}
+          className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+        >
+          Reset
+        </button>
+      </div>
+
       {/* ===== Job Cards ===== */}
       {jobs.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -113,6 +170,16 @@ const JobPage: React.FC = () => {
                   {job.category && (
                     <p className="text-sm text-gray-600 mb-1">
                       Category: {job.category}
+                    </p>
+                  )}
+                  {job.positionType && (
+                    <p className="text-sm text-gray-600 mb-1">
+                      Type: {job.positionType}
+                    </p>
+                  )}
+                  {job.paymentType && (
+                    <p className="text-sm text-gray-600 mb-1">
+                      Payment: {job.paymentType}
                     </p>
                   )}
                   {job.openDate && (

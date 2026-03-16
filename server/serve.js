@@ -73,6 +73,9 @@ app.use("/api/jobs", jobRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/companies", companyRoutes);
 app.use("/api/admins", adminRoutes);
+
+app.use("/api/notifications", (await import("./Routes/notificationRoutes.js")).default);
+
 app.use("/api/verify-company", verifyCompanyRoute);
 app.use("/api/check-duplicate", duplicateCheckRouter);
 

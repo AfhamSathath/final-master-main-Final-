@@ -9,6 +9,10 @@ import adminRoutes from "./routes/adminRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 
 
+import notificationRoutes from "./routes/notificationRoutes.js";
+
+
+
 const app = express();
 
 app.use(cors());
@@ -20,6 +24,10 @@ app.use("/api/jobs", jobRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/companies", companyRoutes);
 app.use("/api/users", userRoutes);
+
+
+app.use("/api/notifications", notificationRoutes);
+
 app.use("/api/admin", adminRoutes);
 
 app.use(notFound);

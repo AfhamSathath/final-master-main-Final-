@@ -9,7 +9,16 @@ const CourseSchema = new mongoose.Schema(
     qualification: { type: String, default: "" },
     duration: { type: String, default: "" },
     category: { type: String, default: "" },
-  
+    courseType: {
+      type: String,
+      enum: ["full-time", "part-time"],
+      default: "full-time",
+    },
+    paymentType: {
+      type: String,
+      enum: ["paid", "unpaid"],
+      default: "paid",
+    },
   },
   { timestamps: true }
 );

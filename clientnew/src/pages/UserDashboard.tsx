@@ -23,6 +23,10 @@ const UserDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUserState] = useState<any>(null);
   const [stats, setStats] = useState<Stats>({ enrolledCourses: 0, appliedJobs: 0, messages: 0 });
+
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const [loading, setLoading] = useState(true);
   const [socket, setSocket] = useState<Socket | null>(null);
 
@@ -37,19 +41,44 @@ const UserDashboard: React.FC = () => {
     const normalizedUser = { ...u, id: u.id || u._id || "" };
     setUserState(normalizedUser);
 
+
+    // Fetch and sync notifications for this user (includes near-deadline and new alerts)
+    const syncNotifications = async () => {
+      try {
+        const userId = normalizedUser._id || normalizedUser.id;
+        if (!userId) return;
+
+        const token = getToken();
+        const response = await fetch(`http://localhost:5000/api/notifications/sync`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) {
+          throw new Error("Failed to sync notifications");
+        }
+
+        const data = await response.json();
+        setNotifications(data.notifications || []);
+        setUnreadCount((data.notifications || []).filter((n: any) => !n.read).length);
+      } catch (err) {
+        console.error("Notification load error:", err);
+      }
+    };
+
+    syncNotifications();
+
     // Initialize socket
     const newSocket: Socket = io("http://localhost:5000", {
       auth: { token: getToken() },
     });
     setSocket(newSocket);
 
-    
+
     newSocket.on("userStatsUpdate", (updatedStats: Stats) => {
       setStats(updatedStats);
       setLoading(false);
     });
 
-    
+
     return () => {
       newSocket.disconnect();
     };
@@ -62,6 +91,39 @@ const UserDashboard: React.FC = () => {
 
   const handleViewCourses = () => navigate("/courses");
   const handleBrowseJobs = () => navigate("/jobs");
+
+
+  const markAsRead = async (notificationId: string) => {
+    try {
+      const token = getToken();
+      const response = await fetch(`http://localhost:5000/api/notifications/${notificationId}/read`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete notification");
+      }
+
+      const updatedNotifications = notifications.filter((n) => n._id !== notificationId);
+      setNotifications(updatedNotifications);
+      setUnreadCount(updatedNotifications.filter((n) => !n.read).length);
+
+      // Run a quick sync with server to stay in sync after deletion
+      const syncToken = getToken();
+      const syncResponse = await fetch("http://localhost:5000/api/notifications/sync", {
+        headers: { Authorization: `Bearer ${syncToken}` },
+      });
+      if (syncResponse.ok) {
+        const syncData = await syncResponse.json();
+        setNotifications(syncData.notifications || updatedNotifications);
+        setUnreadCount((syncData.notifications || updatedNotifications).filter((n: any) => !n.read).length);
+      }
+    } catch (err) {
+      console.error("Failed to mark notification read", err);
+    }
+  };
+
 
   return (
     <ProtectedRoute allowedRoles={["user", "admin", "company"]}>
@@ -138,7 +200,56 @@ const UserDashboard: React.FC = () => {
               </CardContent>
             </Card>
 
-           
+
+            <Card className="shadow-md hover:shadow-xl transition-shadow border-t-4 border-indigo-500">
+              <CardHeader className="bg-indigo-50 rounded-t-lg">
+                <CardTitle className="flex items-center text-indigo-700">
+                  Notifications ({unreadCount} unread)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {notifications.length === 0 ? (
+                  <p className="text-sm text-gray-500">No notifications yet.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {notifications.slice(0, 5).map((notification) => {
+                      const isDeadlineJob = notification.type === "job" && notification.title?.toLowerCase().includes("closing soon");
+                      const rowClass = notification.read
+                        ? "bg-gray-50"
+                        : isDeadlineJob
+                        ? "bg-red-50 border-red-300"
+                        : "bg-white border-indigo-200";
+
+                      const titleClass = isDeadlineJob ? "text-red-700" : "text-gray-900";
+
+                      return (
+                        <li
+                          key={notification._id}
+                          className={`p-2 rounded border ${rowClass}`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className={`text-sm font-semibold ${titleClass}`}>{notification.title}</p>
+                              <p className="text-xs text-gray-500">{new Date(notification.createdAt).toLocaleString()}</p>
+                              <p className="text-sm text-gray-700">{notification.message}</p>
+                            </div>
+                            {!notification.read && (
+                              <button
+                                onClick={() => markAsRead(notification._id)}
+                                className="text-xs text-blue-600 hover:underline"
+                              >
+                                Mark read
+                              </button>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+
           </div>
 
           {/* Courses & Jobs Row */}

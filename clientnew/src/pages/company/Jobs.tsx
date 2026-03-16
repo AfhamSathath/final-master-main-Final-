@@ -43,12 +43,16 @@ export type Job = {
   openDate?: string;
   closeDate?: string;
   category?: string;
+  positionType?: "full-time" | "part-time" | "internship";
+  paymentType?: "paid" | "unpaid";
 };
 
 type NewJob = Omit<Job, "_id">;
 
 // ================== CONSTANTS ==================
 const API_BASE = "http://localhost:5000/api/jobs";
+const POSITION_TYPE_OPTIONS = ["full-time", "part-time", "internship"];
+const PAYMENT_TYPE_OPTIONS = ["paid", "unpaid"];
 
 const CATEGORY_OPTIONS = [
   "Information Technology", 
@@ -101,8 +105,13 @@ const CompanyJobsPage: React.FC = () => {
     openDate: "",
     closeDate: "",
     category: "",
+    positionType: "full-time",
+    paymentType: "paid",
   });
   const [filterCategory, setFilterCategory] = useState("");
+  const [filterPositionType, setFilterPositionType] = useState("");
+  const [filterPaymentType, setFilterPaymentType] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     setFormData((prev) => ({ ...prev, company: companyName }));
@@ -157,9 +166,17 @@ const CompanyJobsPage: React.FC = () => {
   };
 
   const companyJobs = jobs.filter((j) => j.company === companyName);
-  const filteredJobs = filterCategory
-    ? companyJobs.filter((j) => j.category === filterCategory)
-    : companyJobs;
+  const filteredJobs = companyJobs.filter((j) => {
+    const matchesCategory = filterCategory ? j.category === filterCategory : true;
+    const matchesPosition = filterPositionType ? j.positionType === filterPositionType : true;
+    const matchesPayment = filterPaymentType ? j.paymentType === filterPaymentType : true;
+    const matchesSearch =
+      searchTerm.trim() === "" ||
+      j.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      j.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      j.company.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesPosition && matchesPayment && matchesSearch;
+  });
 
   if (isLoading) return <p className="text-center mt-10 text-gray-600">Loading jobs...</p>;
   if (isError) return <p className="text-center mt-10 text-red-500">Failed to load jobs.</p>;
@@ -172,17 +189,46 @@ const CompanyJobsPage: React.FC = () => {
       </h1>
 
       {/* Filter & Add */}
-      <div className="flex justify-between max-w-5xl mx-auto mb-8">
-        <select
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          className="border rounded-lg p-3 bg-white shadow-sm focus:ring-2 focus:ring-blue-400"
-        >
-          <option value="">All Categories</option>
-          {CATEGORY_OPTIONS.map((cat) => (
-            <option key={cat}>{cat}</option>
-          ))}
-        </select>
+      <div className="flex flex-col lg:flex-row gap-3 justify-between max-w-5xl mx-auto mb-8">
+        <div className="flex flex-wrap gap-3">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by title, description, qualification"
+            className="border rounded-lg p-3 min-w-[180px]"
+          />
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="border rounded-lg p-3 bg-white shadow-sm focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="">All Categories</option>
+            {CATEGORY_OPTIONS.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+          <select
+            value={filterPositionType}
+            onChange={(e) => setFilterPositionType(e.target.value)}
+            className="border rounded-lg p-3 bg-white shadow-sm focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="">All Position Types</option>
+            {POSITION_TYPE_OPTIONS.map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+          <select
+            value={filterPaymentType}
+            onChange={(e) => setFilterPaymentType(e.target.value)}
+            className="border rounded-lg p-3 bg-white shadow-sm focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="">All Payment Types</option>
+            {PAYMENT_TYPE_OPTIONS.map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+        </div>
 
         <button
           onClick={() => {
@@ -196,6 +242,8 @@ const CompanyJobsPage: React.FC = () => {
               openDate: "",
               closeDate: "",
               category: "",
+              positionType: "full-time",
+              paymentType: "paid",
             });
           }}
           className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-3 rounded-xl font-medium shadow-md hover:shadow-lg flex items-center gap-2 transition-transform hover:scale-105"
@@ -241,6 +289,15 @@ const CompanyJobsPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <span className="text-sm bg-indigo-50 text-indigo-800 px-2 py-1 rounded-md font-medium">
+                    Type: {job.positionType || "N/A"}
+                  </span>
+                  <span className="text-sm bg-emerald-50 text-emerald-800 px-2 py-1 rounded-md font-medium">
+                    Payment: {job.paymentType ? job.paymentType.toUpperCase() : "N/A"}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-purple-600" />
                   <span className="text-sm bg-purple-50 text-purple-800 px-2 py-1 rounded-md font-medium">
                     Open: {job.openDate || "N/A"}
@@ -272,6 +329,8 @@ const CompanyJobsPage: React.FC = () => {
                       openDate: job.openDate,
                       closeDate: job.closeDate,
                       category: job.category,
+                      positionType: job.positionType || "full-time",
+                      paymentType: job.paymentType || "paid",
                     });
                     setShowForm(true);
                   }}
@@ -350,6 +409,40 @@ const CompanyJobsPage: React.FC = () => {
                 <option value="">Select Category</option>
                 {CATEGORY_OPTIONS.map((cat) => (
                   <option key={cat}>{cat}</option>
+                ))}
+              </select>
+              <select
+                value={formData.positionType}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    positionType: e.target.value as "full-time" | "part-time" | "internship",
+                  })
+                }
+                className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="">Select Position Type</option>
+                {POSITION_TYPE_OPTIONS.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={formData.paymentType}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    paymentType: e.target.value as "paid" | "unpaid",
+                  })
+                }
+                className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="">Select Payment Type</option>
+                {PAYMENT_TYPE_OPTIONS.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
                 ))}
               </select>
               <textarea

@@ -13,11 +13,19 @@ interface Course {
   qualification?: string;
   duration?: string;
   category?: string;
+  courseType?: "full-time" | "part-time" | "internship";
+  paymentType?: "paid" | "unpaid";
 }
+
+const COURSE_TYPE_OPTIONS = ["full-time", "part-time", "internship"];
+const PAYMENT_TYPE_OPTIONS = ["paid", "unpaid"];
 
 const CoursePage: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [courseType, setCourseType] = useState("");
+  const [paymentType, setPaymentType] = useState("");
   const navigate = useNavigate();
 
   const API_BASE_URL = "http://localhost:5000/api/courses";
@@ -27,7 +35,12 @@ const CoursePage: React.FC = () => {
     setLoading(true);
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(API_BASE_URL, {
+      const url = new URL(API_BASE_URL);
+      if (searchTerm) url.searchParams.append("search", searchTerm);
+      if (courseType) url.searchParams.append("courseType", courseType);
+      if (paymentType) url.searchParams.append("paymentType", paymentType);
+
+      const res = await fetch(url.toString(), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) throw new Error("Failed to fetch courses");
@@ -40,7 +53,7 @@ const CoursePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [searchTerm, courseType, paymentType]);
 
   useEffect(() => {
     fetchCourses();
@@ -95,6 +108,50 @@ const CoursePage: React.FC = () => {
         </p>
       </div>
 
+      <div className="max-w-6xl mx-auto mb-6 flex flex-wrap gap-3 justify-center">
+        <input
+          type="text"
+          placeholder="Search courses..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="border rounded-lg px-3 py-2 w-full sm:w-64"
+        />
+        <select
+          value={courseType}
+          onChange={(e) => setCourseType(e.target.value)}
+          className="border rounded-lg px-3 py-2 w-full sm:w-44"
+        >
+          <option value="">All Types</option>
+          {COURSE_TYPE_OPTIONS.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+        <select
+          value={paymentType}
+          onChange={(e) => setPaymentType(e.target.value)}
+          className="border rounded-lg px-3 py-2 w-full sm:w-44"
+        >
+          <option value="">All Payments</option>
+          {PAYMENT_TYPE_OPTIONS.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => {
+            setSearchTerm("");
+            setCourseType("");
+            setPaymentType("");
+          }}
+          className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+        >
+          Reset
+        </button>
+      </div>
+
       {/* ===== Course Cards ===== */}
       {courses.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -113,6 +170,16 @@ const CoursePage: React.FC = () => {
                   {course.category && (
                     <p className="text-sm text-gray-600 mb-1">
                       Category: {course.category}
+                    </p>
+                  )}
+                  {course.courseType && (
+                    <p className="text-sm text-gray-600 mb-1">
+                      Type: {course.courseType}
+                    </p>
+                  )}
+                  {course.paymentType && (
+                    <p className="text-sm text-gray-600 mb-1">
+                      Payment: {course.paymentType}
                     </p>
                   )}
                   {course.duration && (

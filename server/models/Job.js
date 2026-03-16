@@ -10,6 +10,16 @@ const JobSchema = new mongoose.Schema(
     openDate: { type: Date, required: true },
     closeDate: { type: Date, required: true },
     category: { type: String, default: "" }, // Optional category field
+    positionType: {
+      type: String,
+      enum: ["full-time", "part-time", "internship"],
+      default: "full-time",
+    },
+    paymentType: {
+      type: String,
+      enum: ["paid", "unpaid"],
+      default: "paid",
+    },
   },
   { timestamps: true }
 );

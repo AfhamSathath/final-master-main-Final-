@@ -24,6 +24,11 @@ const registerValidationSchema = z
     confirmPassword: z.string().min(1, "Confirm password is required"),
     regNumber: z.string().optional(),
     address: z.string().optional(),
+
+
+    qualificationCategory: z.enum(["Information Technology", "Business & Management", "Engineering", "Digital Marketing", "Healthcare"]).optional(),
+    qualification: z.string().min(2, "Qualification is required for users").optional(),
+
     userType: z.enum(["user", "company"]),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -39,6 +44,10 @@ interface RegisterData {
   confirmPassword: string;
   regNumber?: string;
   address?: string;
+
+  qualificationCategory?: "" | "Information Technology" | "Business & Management" | "Engineering" | "Digital Marketing" | "Healthcare";
+  qualification?: string;
+
   userType: "user" | "company";
 }
 
@@ -53,6 +62,9 @@ const Register: React.FC = () => {
     confirmPassword: "",
     regNumber: "",
     address: "",
+   qualificationCategory: "",
+    qualification: "",
+
     userType: "user",
   });
 
@@ -281,6 +293,10 @@ const Register: React.FC = () => {
           name: formData.name,
           email: formData.email,
           contactNumber: formData.phone,
+
+          qualificationCategory: formData.qualificationCategory,
+          qualification: formData.qualification,
+
           password: formData.password,
         });
 
@@ -419,7 +435,48 @@ const Register: React.FC = () => {
                 />
               </div>
 
-              {/* Password */}
+
+              {/* Qualification for user */}
+              {formData.userType === "user" && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold mb-1 text-gray-700">
+                      Qualification category
+                    </label>
+                    <select
+                      name="qualificationCategory"
+                      value={formData.qualificationCategory || ""}
+                      onChange={handleChange}
+                      required
+                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-400"
+                    >
+                      <option value="">Select category</option>
+                      <option value="Information Technology">Information Technology</option>
+                      <option value="Business & Management">Business & Management</option>
+                      <option value="Engineering">Engineering</option>
+                      <option value="Digital Marketing">Digital Marketing</option>
+                      <option value="Healthcare">Healthcare</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-1 text-gray-700">
+                      Qualification (e.g., IT Diploma, A/L, O/L)
+                    </label>
+                    <input
+                      type="text"
+                      name="qualification"
+                      value={formData.qualification || ""}
+                      onChange={handleChange}
+                      required
+                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-400"
+                      placeholder="Enter your qualification"
+                    />
+                  </div>
+                </>
+              )}
+
+
               <div className="relative">
                 <label className="block text-sm font-semibold mb-1 text-gray-700">
                   Password

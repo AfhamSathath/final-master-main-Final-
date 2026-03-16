@@ -14,7 +14,12 @@ interface Course {
   qualification?: string;
   duration?: string;
   category?: string;
+  courseType?: "full-time" | "part-time" | "internship";
+  paymentType?: "paid" | "unpaid";
 }
+
+const COURSE_TYPE_OPTIONS = ["full-time", "part-time", "internship"];
+const PAYMENT_TYPE_OPTIONS = ["paid", "unpaid"];
 
 const STANDARD_CATEGORIES = [
   "Information Technology",
@@ -37,6 +42,8 @@ const CoursePage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [qualificationFilter, setQualificationFilter] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [courseTypeFilter, setCourseTypeFilter] = useState("");
+  const [paymentTypeFilter, setPaymentTypeFilter] = useState("");
   const [loading, setLoading] = useState(true);
 
   const API_BASE_URL = "http://localhost:5000/api/courses";
@@ -102,15 +109,12 @@ useEffect(() => {
       !qFilter ||
       qual.includes(qFilter) ||
       (qFilter.includes("dg") && qual.includes("degree")) ||
-      (qFilter.includes("dip") && qual.includes("diploma")) ||
+      (qFilter.includes("dip") && qual.includes("diploma"));
 
-      (qFilter.includes("al") && qual.includes("a/l")) ||
-      (qFilter.includes("ol") && qual.includes("o/l"));
+    const matchCourseType = courseTypeFilter ? course.courseType === courseTypeFilter : true;
+    const matchPaymentType = paymentTypeFilter ? course.paymentType === paymentTypeFilter : true;
 
-      (qFilter.includes("al") && qual.includes("a/l"));
-
-
-    return matchCategory && matchSearch && matchQualification;
+    return matchCategory && matchSearch && matchQualification && matchCourseType && matchPaymentType;
   });
 
   // ✅ Category counts
@@ -166,6 +170,32 @@ useEffect(() => {
           onChange={(e) => setQualificationFilter(e.target.value)}
           className="w-full md:w-80 border-2 border-green-400 focus:border-green-600"
         />
+
+        <select
+          value={courseTypeFilter}
+          onChange={(e) => setCourseTypeFilter(e.target.value)}
+          className="w-full md:w-44 border-2 border-purple-400 focus:border-purple-600 rounded-lg p-2"
+        >
+          <option value="">All Types</option>
+          {COURSE_TYPE_OPTIONS.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={paymentTypeFilter}
+          onChange={(e) => setPaymentTypeFilter(e.target.value)}
+          className="w-full md:w-44 border-2 border-yellow-400 focus:border-yellow-600 rounded-lg p-2"
+        >
+          <option value="">All Payments</option>
+          {PAYMENT_TYPE_OPTIONS.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* ===== Category Buttons ===== */}
@@ -219,6 +249,14 @@ useEffect(() => {
                     }`}
                   >
                     Category: {course.category || "N/A"}
+                  </p>
+
+                  <p className="text-sm font-medium bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full inline-block">
+                    Type: {course.courseType || "N/A"}
+                  </p>
+
+                  <p className="text-sm font-medium bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full inline-block">
+                    Payment: {course.paymentType ? course.paymentType.toUpperCase() : "N/A"}
                   </p>
 
                   <p className="text-sm font-medium bg-green-100 text-green-800 px-3 py-1 rounded-full inline-block">

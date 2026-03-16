@@ -5,12 +5,21 @@ const userSchema = new mongoose.Schema({
   email: { type: String, unique: true },
   password: String,
   role: { type: String, default: "user" },
+
   contactNumber: String,
   location: String,
    resetToken: { type: String },
   resetTokenExpiry: { type: Date },
   
   
+
+
+  qualificationCategory: { type: String, default: "" },
+  qualification: { type: String, default: "" },
+  contactNumber: String,
+  location: String,
+  resetToken: { type: String },
+  resetTokenExpiry: { type: Date },
 
 });
 

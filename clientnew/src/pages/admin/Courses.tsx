@@ -23,6 +23,10 @@ type Course = {
   qualification: string;
   duration: string;
   category: string;
+
+
+  courseType?: "full-time" | "part-time" | "internship";
+  paymentType?: "paid" | "unpaid";
   createdAt: string;
 };
 
@@ -36,6 +40,11 @@ type Company = {
 // ================== CONSTANTS ==================
 const API_BASE = "http://localhost:5000/api/courses";
 const COMPANY_API = "http://localhost:5000/api/companies";
+
+
+const COURSE_TYPE_OPTIONS = ["full-time", "part-time", "internship"];
+const PAYMENT_TYPE_OPTIONS = ["paid", "unpaid"];
+
 
 const CATEGORY_OPTIONS = [
   "Information Technology",
@@ -86,6 +95,10 @@ const AdminCoursesPage: React.FC = () => {
 
   const [showForm, setShowForm] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterCourseType, setFilterCourseType] = useState("");
+  const [filterPaymentType, setFilterPaymentType] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState<NewCourse>({
     name: "",
     description: "",
@@ -93,8 +106,9 @@ const AdminCoursesPage: React.FC = () => {
     qualification: "",
     duration: "",
     category: "",
+    courseType: "full-time",
+    paymentType: "paid",
   });
-  const [filterCategory, setFilterCategory] = useState("");
   const [companies, setCompanies] = useState<Company[]>([]);
 
   const { data: courses = [], isLoading, isError } = useQuery<Course[]>({
@@ -149,9 +163,17 @@ const AdminCoursesPage: React.FC = () => {
       : createMutation.mutate(formData);
   };
 
-  const filteredCourses = filterCategory
-    ? courses.filter((c) => c.category === filterCategory)
-    : courses;
+  const filteredCourses = courses.filter((c) => {
+    const matchesCategory = filterCategory ? c.category === filterCategory : true;
+    const matchesCourseType = filterCourseType ? c.courseType === filterCourseType : true;
+    const matchesPaymentType = filterPaymentType ? c.paymentType === filterPaymentType : true;
+    const matchesSearch =
+      searchTerm.trim() === "" ||
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.institution.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesCourseType && matchesPaymentType && matchesSearch;
+  });
 
   if (isLoading)
     return <p className="text-center mt-10 text-gray-600">Loading courses...</p>;
@@ -166,18 +188,49 @@ const AdminCoursesPage: React.FC = () => {
       </h1>
 
       {/* Filter & Add */}
-      <div className="flex justify-between max-w-5xl mx-auto mb-8">
-        <select
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          className="border rounded-lg p-3 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-400"
-        >
-          <option value="">All Categories</option>
-          {CATEGORY_OPTIONS.map((cat) => (
-            <option key={cat}>{cat}</option>
-          ))}
-        </select>
+      <div className="flex flex-col lg:flex-row gap-3 justify-between max-w-5xl mx-auto mb-8">
+        <div className="flex flex-wrap gap-3">
+          <input
+            type="text"
+            placeholder="🔍 Search by name/institution"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="border rounded-lg p-3 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-400"
+          />
 
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="border rounded-lg p-3 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="">All Categories</option>
+            {CATEGORY_OPTIONS.map((cat) => (
+              <option key={cat}>{cat}</option>
+            ))}
+          </select>
+
+          <select
+            value={filterCourseType}
+            onChange={(e) => setFilterCourseType(e.target.value)}
+            className="border rounded-lg p-3 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="">All Course Types</option>
+            {COURSE_TYPE_OPTIONS.map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+
+          <select
+            value={filterPaymentType}
+            onChange={(e) => setFilterPaymentType(e.target.value)}
+            className="border rounded-lg p-3 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="">All Payment Types</option>
+            {PAYMENT_TYPE_OPTIONS.map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+        </div>
         <button
           onClick={() => {
             setShowForm(true);
@@ -189,6 +242,8 @@ const AdminCoursesPage: React.FC = () => {
               qualification: "",
               duration: "",
               category: "",
+              courseType: "full-time",
+              paymentType: "paid",
             });
           }}
           className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-3 rounded-xl font-medium shadow-md hover:shadow-lg flex items-center gap-2 transition-transform hover:scale-105"
@@ -236,6 +291,15 @@ const AdminCoursesPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <span className="text-sm bg-indigo-50 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-100 px-2 py-1 rounded-md font-medium">
+                    Type: {course.courseType || "full-time"}
+                  </span>
+                  <span className="text-sm bg-emerald-50 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-100 px-2 py-1 rounded-md font-medium">
+                    {course.paymentType ? course.paymentType.toUpperCase() : "PAID"}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-purple-600" />
                   <span className="text-sm bg-purple-50 dark:bg-purple-900 text-purple-800 dark:text-purple-100 px-2 py-1 rounded-md font-medium">
                     Duration: {course.duration || "N/A"}
@@ -267,6 +331,8 @@ const AdminCoursesPage: React.FC = () => {
                       qualification: course.qualification,
                       duration: course.duration,
                       category: course.category,
+                      courseType: course.courseType || "full-time",
+                      paymentType: course.paymentType || "paid",
                     });
                     setShowForm(true);
                   }}
@@ -344,6 +410,40 @@ const AdminCoursesPage: React.FC = () => {
                 <option value="">Select Category</option>
                 {CATEGORY_OPTIONS.map((cat) => (
                   <option key={cat}>{cat}</option>
+                ))}
+              </select>
+              <select
+                value={formData.courseType}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    courseType: e.target.value as "full-time" | "part-time" | "internship",
+                  })
+                }
+                className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Select Course Type</option>
+                {COURSE_TYPE_OPTIONS.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={formData.paymentType}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    paymentType: e.target.value as "paid" | "unpaid",
+                  })
+                }
+                className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Select Payment Type</option>
+                {PAYMENT_TYPE_OPTIONS.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
                 ))}
               </select>
               <textarea

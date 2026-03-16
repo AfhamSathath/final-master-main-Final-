@@ -4,7 +4,8 @@ import bcrypt from "bcryptjs";
 // ================== CREATE USER ==================
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, role, contactNumber, location } = req.body;
+
+    const { name, email, password, role, qualificationCategory, qualification, contactNumber, location } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -20,6 +21,10 @@ export const createUser = async (req, res) => {
       email,
       password: hashedPassword,
       role,
+
+      qualificationCategory,
+      qualification,
+
       contactNumber,
       location,
     });
@@ -55,9 +60,9 @@ export const getUserById = async (req, res) => {
 // ================== UPDATE USER ==================
 export const updateUser = async (req, res) => {
   try {
-    const { name, email, password, role, contactNumber, location } = req.body;
+    const { name, email, password, role, qualificationCategory, qualification, contactNumber, location } = req.body;
 
-    let updatedData = { name, email, role, contactNumber, location };
+    let updatedData = { name, email, role, qualificationCategory, qualification, contactNumber, location };
 
     // If password provided, hash it
     if (password) {
