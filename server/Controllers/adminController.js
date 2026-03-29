@@ -153,7 +153,8 @@ export const createAdmin = async (req, res) => {
       newAdmin.email,
       newAdmin.name,
       "Administrative Access Granted",
-      `You have been appointed as an administrator for Creeer Lk Job Portal - Creeer Lk Job Portalty of Applied Sciences, Creeer Lk Job Portal. Your account has been successfully initialized.\n\nPlease log in to manage the system configurations and user accounts.`
+      `You have been appointed as an administrator for the Qualification Based Job Finder System. Your account has been successfully initialized.\n\nPlease log in to manage the system configurations, oversee qualifications, and manage users.`
+
     );
 
 
@@ -189,7 +190,8 @@ export const updateAdmin = async (req, res) => {
       updatedAdmin.email,
       updatedAdmin.name,
       "Security Alert: Admin Profile Updated",
-      "Your administrative profile was recently updated in Creeer Lk Job Portal. If you did not perform this update, please contact the lead administrator or the departmental security officer."
+      "Your administrative profile was recently updated in the Qualification Based Job Finder System. If you did not perform this update, please contact the support team or your manager."
+
     );
 
 

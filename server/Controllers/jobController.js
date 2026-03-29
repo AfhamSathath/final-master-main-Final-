@@ -70,8 +70,9 @@ export const createJob = async (req, res) => {
           sendWorkflowEmail(
             user.email,
             user.name,
-            "New Paper Moderation Assignment",
-            `A new paper titled **"${title}"** from the department of **${company}** is now available for moderation. Since your qualifications match this field (${qualificationMatch}/${category}), you have been automatically notified. Please log in to your dashboard to review the paper and provide moderation feedback before the deadline: **${new Date(closeDate).toDateString()}**.`
+            "New Job Opportunity Found",
+            `A new job matching your qualifications titled **"${title}"** from **${company}** is now available. Log in to your Qualification Based Job Finder dashboard to view the details and apply before **${new Date(closeDate).toDateString()}**.`
+
           )
         )
       );

@@ -39,7 +39,8 @@ export const createUser = async (req, res) => {
       newUser.email,
       newUser.name,
       "Welcome to the Job Portal",
-      `Your account has been successfully created in the Job Portal - Creeer Lk Job Portalty of Applied Sciences, Creeer Lk Job Portal. Your role is set as **${newUser.role}**.\n\nYou can now log in to manage paper assignments and moderation workflows.`
+      `Welcome to the Qualification Based Job Finder System for Sri Lanka. Your account has been successfully created with the role: **${newUser.role}**.\n\nYou can now log in to update your educational qualifications and search for your ideal job.`
+
     );
 
 
@@ -91,7 +92,8 @@ export const updateUser = async (req, res) => {
       user.email,
       user.name,
       "Security Alert: Profile Updated",
-      "This is a notification from Creeer Lk Job Portal. Your profile information was recently updated. If you did not perform this action, please contact the Creeer Lk Job Portalty administrator immediately."
+      "This is a notification from the Qualification Based Job Finder System. Your profile information was recently updated. If you did not perform this action, please contact the support team immediately."
+
     );
 
 

@@ -211,7 +211,8 @@ router.post("/reset-password", async (req, res) => {
       account.email,
       account.name,
       "Password Successfully Reset",
-      "Your password for Creeer Lk Job Portal - Creeer Lk Job Portalty of Applied Sciences, Creeer Lk Job Portal has been successfully reset. If you did not make this change, please secure your account immediately."
+      "Your password for the Qualification Based Job Finder System has been successfully reset. If you did not make this change, please secure your account immediately."
+
     );
 
     return res.status(200).json({

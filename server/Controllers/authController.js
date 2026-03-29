@@ -69,8 +69,9 @@ export const register = async (req, res) => {
     await sendWorkflowEmail(
       account.email,
       account.name,
-      "Welcome to Creeer Lk Job Portal",
-      `Welcome to Creeer Lk Job Portal - Creeer Lk Job Portalty of Applied Sciences, Creeer Lk Job Portal. Your account as a **${account.role}** has been successfully created.\n\nYou can now access the dashboard to manage moderation workflows, review papers, and coordinate with the Creeer Lk Job Portalty.`
+      "Welcome to the Qualification Based Job Finder System",
+      `Welcome to the Qualification Based Job Finder System for Sri Lanka. Your account as a **${account.role}** has been successfully created.\n\nYou can now access the dashboard to manage your qualifications, explore job opportunities, and find the best education paths.`
+
     );
 
 

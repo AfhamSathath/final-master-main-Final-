@@ -41,9 +41,9 @@ export async function sendOTP(toEmail, manualOtp = null) {
       html: `
         <div style="font-family:sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
           <div style="text-align: center; margin-bottom: 25px;">
-            <img src="blob:https://gemini.google.com/1634291e-e5ab-4d77-b822-12229c103136" alt="Career LK Logo" style="width: 120px; height: auto; margin-bottom: 15px;">
-            <h1 style="color: #333; margin: 0; font-size: 22px; font-weight: 700;">Career LK Guidance Portal</h1>
-          
+         <img src="https://gemini.google.com/share/2248602b7e19" alt="Logo">  
+            <h1 style="color: #333; margin: 0; font-size: 22px; font-weight: 700;">Qualification Based Job Finder System</h1>
+            <p style="color: #666; font-size: 16px; margin: 5px 0 0 0; font-weight: 500;">Career Guidance & Development - Sri Lanka</p>
           </div>
           <h2 style="color: #333; text-align: center;">OTP Verification</h2>
           <p style="font-size: 16px; color: #555;">Hello,</p>
@@ -53,7 +53,9 @@ export async function sendOTP(toEmail, manualOtp = null) {
           </div>
           <p style="font-size: 14px; color: #888;">This OTP is valid for 5 minutes. Do not share this code with anyone.</p>
           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-          <p style="font-size: 12px; color: #aaa; text-align: center;">© ${new Date().getFullYear()} Exam Manager Pro. All rights reserved.</p>
+          <p style="font-size: 12px; color: #aaa; text-align: center;">© ${new Date().getFullYear()} Qualification Job Finder. All rights reserved.</p>
+
+
         </div>
       `,
     };
@@ -86,9 +88,9 @@ export async function sendWorkflowEmail(toEmail, recipientName, subject, message
       html: `
         <div style="font-family:sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
           <div style="text-align: center; margin-bottom: 25px;">
-            <img src="https://upload.wikimedia.org/wikipedia/en/a/a0/Creeer Lk Job Portal_logo2.png" alt="Creeer Lk Job Portal Logo" style="width: 120px; height: auto; margin-bottom: 15px;">
-            <h1 style="color: #333; margin: 0; font-size: 22px; font-weight: 700;">Exam Paper Moderation System</h1>
-            <p style="color: #666; font-size: 16px; margin: 5px 0 0 0; font-weight: 500;">Creeer Lk Job Portalty of Applied Sciences</p>
+            <div style="background: #007bff; color: white; width: 60px; height: 60px; border-radius: 50%; line-height: 60px; font-size: 30px; margin: 0 auto 15px; font-weight: bold;">QJ</div>
+            <h1 style="color: #333; margin: 0; font-size: 22px; font-weight: 700;">Qualification Based Job Finder System</h1>
+            <p style="color: #666; font-size: 16px; margin: 5px 0 0 0; font-weight: 500;">Career Guidance & Development - Sri Lanka</p>
           </div>
           <div style="padding: 20px; background: #fbfbfb; border-radius: 8px;">
             <p style="font-size: 16px; color: #333;">Dear ${recipientName},</p>
@@ -102,7 +104,9 @@ export async function sendWorkflowEmail(toEmail, recipientName, subject, message
           </div>
           <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
           <p style="font-size: 12px; color: #aaa; text-align: center;">This is an automated notification. Please do not reply directly to this email.</p>
-          <p style="font-size: 11px; color: #bbb; text-align: center;">© ${new Date().getFullYear()} Exam Manager Pro - Creeer Lk Job Portal. All rights reserved.</p>
+          <p style="font-size: 11px; color: #bbb; text-align: center;">© ${new Date().getFullYear()} Qualification Job Finder. All rights reserved.</p>
+
+
         </div>
       `,
     };

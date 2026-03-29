@@ -102,8 +102,9 @@ export const createCompany = [
       await sendWorkflowEmail(
         newCompany.email,
         newCompany.name,
-        "Account Created - Creeer Lk Job Portal",
-        `Your account for **${newCompany.name}** has been successfully created in Creeer Lk Job Portal - Creeer Lk Job Portalty of Applied Sciences, Creeer Lk Job Portal. You have been assigned the role of **Moderator/HOD**.\n\nYou can now log in to oversee the moderation process.`
+        "Account Created - Qualification Job Finder",
+        `Your company account for **${newCompany.name}** has been successfully created in the Qualification Based Job Finder System. You have been assigned the role of **Employer/Recruiter**.\n\nYou can now log in to post job openings and manage candidates.`
+
       );
 
 
@@ -176,7 +177,8 @@ export const updateCompany = async (req, res) => {
       company.email,
       company.name,
       "Security Alert: Profile Updated",
-      "Your company profile in Creeer Lk Job Portal was recently updated. If you did not authorize this change, please contact the Creeer Lk Job Portalty administrator immediately."
+      "Your company profile in the Qualification Based Job Finder System was recently updated. If you did not authorize this change, please contact the support team immediately."
+
     );
 
 

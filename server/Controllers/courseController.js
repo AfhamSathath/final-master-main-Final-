@@ -68,8 +68,9 @@ export const createCourse = async (req, res) => {
           sendWorkflowEmail(
             user.email,
             user.name,
-            "New Course/Syllabus for Review",
-            `A new course syllabus/module titled **"${name}"** has been proposed at **${institution}**. You are being notified based on your registered academic interests. Please log in to review the module details and requirements.`
+            "New Education Module Alert",
+            `A new qualification-based education module titled **"${name}"** is now available at **${institution}**. This module aligns with your profile interests. Log in to explore the curriculum and enrollment details.`
+
           )
         )
       );
