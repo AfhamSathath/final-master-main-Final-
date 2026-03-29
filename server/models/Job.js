@@ -20,6 +20,7 @@ const JobSchema = new mongoose.Schema(
       enum: ["paid", "unpaid"],
       default: "paid",
     },
+    location: { type: String, default: "" },
   },
   { timestamps: true }
 );

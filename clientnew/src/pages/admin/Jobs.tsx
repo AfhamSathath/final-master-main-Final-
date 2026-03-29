@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
+import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
 import {
   Edit,
   Trash2,
@@ -24,9 +25,15 @@ type Job = {
   openDate?: string;
   closeDate?: string;
   category?: string;
+  positionType?: "full-time" | "part-time" | "internship";
+  paymentType?: "paid" | "unpaid";
+  location?: string;
 };
 
 type NewJob = Omit<Job, "_id">;
+
+const JOB_TYPE_OPTIONS = ["full-time", "part-time", "internship"];
+const PAYMENT_TYPE_OPTIONS = ["paid", "unpaid"];
 
 type Company = {
   _id: string;
@@ -85,6 +92,9 @@ const AdminJobsPage: React.FC = () => {
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filterCategory, setFilterCategory] = useState("");
+  const [filterLocation, setFilterLocation] = useState("");
+  const [filterJobType, setFilterJobType] = useState("");
+  const [filterPaymentType, setFilterPaymentType] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState<NewJob>({
     title: "",
@@ -94,6 +104,7 @@ const AdminJobsPage: React.FC = () => {
     openDate: "",
     closeDate: "",
     category: "",
+    location: "",
   });
 
   const { data: jobs = [], isLoading, isError } = useQuery<Job[]>({
@@ -151,10 +162,20 @@ const AdminJobsPage: React.FC = () => {
 
   const filteredJobs = jobs.filter((job) => {
     const matchesCategory = filterCategory ? job.category === filterCategory : true;
+    const matchesLocation = filterLocation ? job.location === filterLocation : true;
+    const matchesJobType = filterJobType ? job.positionType === filterJobType : true;
+    const matchesPaymentType = filterPaymentType ? job.paymentType === filterPaymentType : true;
     const matchesSearch =
       searchTerm.trim() === "" ||
-      job.title.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
+      job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (job.location || "").toLowerCase().includes(searchTerm.toLowerCase());
+    return (
+      matchesCategory &&
+      matchesLocation &&
+      matchesJobType &&
+      matchesPaymentType &&
+      matchesSearch
+    );
   });
 
   if (isLoading)
@@ -189,6 +210,36 @@ const AdminJobsPage: React.FC = () => {
             <option key={cat}>{cat}</option>
           ))}
         </select>
+        <select
+          value={filterLocation}
+          onChange={(e) => setFilterLocation(e.target.value)}
+          className="border rounded-lg p-3 bg-white shadow-sm focus:ring-2 focus:ring-blue-400"
+        >
+          <option value="">All Districts</option>
+          {SRI_LANKA_DISTRICTS.map((district) => (
+            <option key={district} value={district}>{district}</option>
+          ))}
+        </select>
+        <select
+          value={filterJobType}
+          onChange={(e) => setFilterJobType(e.target.value)}
+          className="border rounded-lg p-3 bg-white shadow-sm focus:ring-2 focus:ring-blue-400"
+        >
+          <option value="">All Types</option>
+          {JOB_TYPE_OPTIONS.map((type) => (
+            <option key={type} value={type}>{type}</option>
+          ))}
+        </select>
+        <select
+          value={filterPaymentType}
+          onChange={(e) => setFilterPaymentType(e.target.value)}
+          className="border rounded-lg p-3 bg-white shadow-sm focus:ring-2 focus:ring-blue-400"
+        >
+          <option value="">All Payments</option>
+          {PAYMENT_TYPE_OPTIONS.map((type) => (
+            <option key={type} value={type}>{type}</option>
+          ))}
+        </select>
         <button
           onClick={() => {
             setShowForm(true);
@@ -201,6 +252,9 @@ const AdminJobsPage: React.FC = () => {
               openDate: "",
               closeDate: "",
               category: "",
+              location: filterLocation || "",
+              positionType: "full-time",
+              paymentType: "paid",
             });
           }}
           className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-3 rounded-xl font-medium shadow-md hover:shadow-lg flex items-center gap-2 transition-transform hover:scale-105"
@@ -248,6 +302,28 @@ const AdminJobsPage: React.FC = () => {
                   </span>
                 </div>
 
+{job.positionType && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm bg-purple-50 text-purple-800 px-2 py-1 rounded-md font-medium">
+                          Type: {job.positionType}
+                        </span>
+                      </div>
+                    )}
+                    {job.paymentType && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm bg-yellow-50 text-yellow-800 px-2 py-1 rounded-md font-medium">
+                          Payment: {job.paymentType}
+                        </span>
+                      </div>
+                    )}
+                    {job.location && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm bg-blue-50 text-blue-800 px-2 py-1 rounded-md font-medium">
+                      Location: {job.location}
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-purple-600" />
                   <span className="text-sm bg-purple-50 text-purple-800 px-2 py-1 rounded-md font-medium">
@@ -288,6 +364,9 @@ const AdminJobsPage: React.FC = () => {
                       openDate: job.openDate,
                       closeDate: job.closeDate,
                       category: job.category,
+                      location: job.location || "",
+                      positionType: job.positionType || "full-time",
+                      paymentType: job.paymentType || "paid",
                     });
                     setShowForm(true);
                   }}
@@ -392,6 +471,42 @@ const AdminJobsPage: React.FC = () => {
                 <option value="">Select Category</option>
                 {CATEGORY_OPTIONS.map((cat) => (
                   <option key={cat}>{cat}</option>
+                ))}
+              </select>
+              <select
+                value={formData.location || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, location: e.target.value })
+                }
+                className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="">Select District</option>
+                {SRI_LANKA_DISTRICTS.map((district) => (
+                  <option key={district} value={district}>{district}</option>
+                ))}
+              </select>
+              <select
+                value={formData.positionType || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, positionType: e.target.value as "full-time" | "part-time" | "internship" })
+                }
+                className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="">Select Job Type</option>
+                {JOB_TYPE_OPTIONS.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+              <select
+                value={formData.paymentType || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, paymentType: e.target.value as "paid" | "unpaid" })
+                }
+                className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="">Select Payment Type</option>
+                {PAYMENT_TYPE_OPTIONS.map((type) => (
+                  <option key={type} value={type}>{type}</option>
                 ))}
               </select>
               <textarea

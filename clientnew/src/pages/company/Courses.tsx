@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
+import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
 import {
   Edit,
   Trash2,
@@ -23,6 +24,7 @@ type Course = {
   qualification: string;
   duration: string;
   category: string;
+  location?: string;
   courseType?: "full-time" | "part-time" | "internship";
   paymentType?: "paid" | "unpaid";
   createdAt: string;
@@ -83,10 +85,12 @@ const CompanyCoursesPage: React.FC = () => {
     qualification: "",
     duration: "",
     category: "",
+    location: "",
     courseType: "full-time",
     paymentType: "paid",
   });
   const [filterCategory, setFilterCategory] = useState("");
+  const [filterLocation, setFilterLocation] = useState("");
   const [filterCourseType, setFilterCourseType] = useState("");
   const [filterPaymentType, setFilterPaymentType] = useState("");
 
@@ -145,9 +149,10 @@ const CompanyCoursesPage: React.FC = () => {
   const companyCourses = courses.filter((c) => c.institution === companyName);
   const filteredCourses = companyCourses.filter((c) => {
     const matchesCategory = filterCategory ? c.category === filterCategory : true;
+    const matchesLocation = filterLocation ? c.location === filterLocation : true;
     const matchesCourseType = filterCourseType ? c.courseType === filterCourseType : true;
     const matchesPaymentType = filterPaymentType ? c.paymentType === filterPaymentType : true;
-    return matchesCategory && matchesCourseType && matchesPaymentType;
+    return matchesCategory && matchesLocation && matchesCourseType && matchesPaymentType;
   });
 
   if (isLoading)
@@ -196,6 +201,18 @@ const CompanyCoursesPage: React.FC = () => {
             {PAYMENT_TYPE_OPTIONS.map((type) => (
               <option key={type} value={type}>
                 {type}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filterLocation}
+            onChange={(e) => setFilterLocation(e.target.value)}
+            className="border rounded-lg p-3 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="">All Districts</option>
+            {SRI_LANKA_DISTRICTS.map((district) => (
+              <option key={district} value={district}>
+                {district}
               </option>
             ))}
           </select>
@@ -267,6 +284,13 @@ const CompanyCoursesPage: React.FC = () => {
                     Payment: {course.paymentType ? course.paymentType.toUpperCase() : "PAID"}
                   </span>
                 </div>
+                {course.location && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-100 px-2 py-1 rounded-md font-medium">
+                      Location: {course.location}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-purple-600" />
                   <span className="text-sm bg-purple-50 dark:bg-purple-900 text-purple-800 dark:text-purple-100 px-2 py-1 rounded-md font-medium">

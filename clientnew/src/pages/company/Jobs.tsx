@@ -5,6 +5,7 @@ import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import { Edit, Trash2, PlusCircle, X, Building2, Calendar, GraduationCap } from "lucide-react";
 import { getUser } from "@/utils/Auth";
+import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
 
 // ================== HELPER FUNCTION ==================
 const LinkifyText = ({ text }: { text: string }) => {
@@ -45,6 +46,7 @@ export type Job = {
   category?: string;
   positionType?: "full-time" | "part-time" | "internship";
   paymentType?: "paid" | "unpaid";
+  location?: string;
 };
 
 type NewJob = Omit<Job, "_id">;
@@ -107,10 +109,12 @@ const CompanyJobsPage: React.FC = () => {
     category: "",
     positionType: "full-time",
     paymentType: "paid",
+    location: "",
   });
   const [filterCategory, setFilterCategory] = useState("");
   const [filterPositionType, setFilterPositionType] = useState("");
   const [filterPaymentType, setFilterPaymentType] = useState("");
+  const [filterLocation, setFilterLocation] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -170,12 +174,15 @@ const CompanyJobsPage: React.FC = () => {
     const matchesCategory = filterCategory ? j.category === filterCategory : true;
     const matchesPosition = filterPositionType ? j.positionType === filterPositionType : true;
     const matchesPayment = filterPaymentType ? j.paymentType === filterPaymentType : true;
+    const matchesLocation = filterLocation ? j.location === filterLocation : true;
+    const term = searchTerm.trim().toLowerCase();
     const matchesSearch =
-      searchTerm.trim() === "" ||
-      j.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      j.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      j.company.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesPosition && matchesPayment && matchesSearch;
+      term === "" ||
+      j.title.toLowerCase().includes(term) ||
+      j.description.toLowerCase().includes(term) ||
+      j.company.toLowerCase().includes(term) ||
+      (j.location?.toLowerCase().includes(term));
+    return matchesCategory && matchesPosition && matchesPayment && matchesLocation && matchesSearch;
   });
 
   if (isLoading) return <p className="text-center mt-10 text-gray-600">Loading jobs...</p>;
@@ -226,6 +233,16 @@ const CompanyJobsPage: React.FC = () => {
             <option value="">All Payment Types</option>
             {PAYMENT_TYPE_OPTIONS.map((type) => (
               <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+          <select
+            value={filterLocation}
+            onChange={(e) => setFilterLocation(e.target.value)}
+            className="border rounded-lg p-3 bg-white shadow-sm focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="">All Districts</option>
+            {SRI_LANKA_DISTRICTS.map((district) => (
+              <option key={district} value={district}>{district}</option>
             ))}
           </select>
         </div>
@@ -296,6 +313,14 @@ const CompanyJobsPage: React.FC = () => {
                     Payment: {job.paymentType ? job.paymentType.toUpperCase() : "N/A"}
                   </span>
                 </div>
+
+                {job.location && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm bg-blue-50 text-blue-800 px-2 py-1 rounded-md font-medium">
+                      Location: {job.location}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-purple-600" />
@@ -442,6 +467,23 @@ const CompanyJobsPage: React.FC = () => {
                 {PAYMENT_TYPE_OPTIONS.map((type) => (
                   <option key={type} value={type}>
                     {type}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={formData.location}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    location: e.target.value,
+                  })
+                }
+                className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="">Select District</option>
+                {SRI_LANKA_DISTRICTS.map((district) => (
+                  <option key={district} value={district}>
+                    {district}
                   </option>
                 ))}
               </select>

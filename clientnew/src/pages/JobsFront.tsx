@@ -5,6 +5,8 @@ import { io, Socket } from "socket.io-client";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
+import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
+
 interface Job {
   _id: string;
   title: string;
@@ -15,6 +17,7 @@ interface Job {
   category?: string;
   positionType?: "full-time" | "part-time" | "internship";
   paymentType?: "paid" | "unpaid";
+  location?: string;
 }
 
 const POSITION_TYPE_OPTIONS = ["full-time", "part-time", "internship"];
@@ -26,6 +29,7 @@ const JobPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionType, setPositionType] = useState("");
   const [paymentType, setPaymentType] = useState("");
+  const [location, setLocation] = useState("");
   const navigate = useNavigate();
 
   const API_BASE_URL = "http://localhost:5000/api/jobs";
@@ -40,6 +44,7 @@ const JobPage: React.FC = () => {
       if (searchTerm) url.searchParams.append("search", searchTerm);
       if (positionType) url.searchParams.append("positionType", positionType);
       if (paymentType) url.searchParams.append("paymentType", paymentType);
+      if (location) url.searchParams.append("location", location);
 
       const res = await fetch(url.toString(), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -141,11 +146,25 @@ const JobPage: React.FC = () => {
             </option>
           ))}
         </select>
+
+        <select
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          className="border rounded-lg px-3 py-2 w-full sm:w-52"
+        >
+          <option value="">All Districts</option>
+          {SRI_LANKA_DISTRICTS.map((district) => (
+            <option key={district} value={district}>
+              {district}
+            </option>
+          ))}
+        </select>
         <button
           onClick={() => {
             setSearchTerm("");
             setPositionType("");
             setPaymentType("");
+            setLocation("");
           }}
           className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
         >
@@ -180,6 +199,11 @@ const JobPage: React.FC = () => {
                   {job.paymentType && (
                     <p className="text-sm text-gray-600 mb-1">
                       Payment: {job.paymentType}
+                    </p>
+                  )}
+                  {job.location && (
+                    <p className="text-sm text-gray-600 mb-1">
+                      Location: {job.location}
                     </p>
                   )}
                   {job.openDate && (

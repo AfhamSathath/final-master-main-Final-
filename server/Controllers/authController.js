@@ -6,6 +6,13 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import generateToken from "../src/utils/generateToken.js";
+import { transporter, generateOTP, sendWorkflowEmail, sendOTP } from "../src/utils/otpService.js";
+
+import OTP from "../models/OTP.js";
+
+
+
+
 
 // ================= REGISTER =================
 export const register = async (req, res) => {
@@ -56,7 +63,20 @@ export const register = async (req, res) => {
         });
     }
 
+    await account.save();
+
+    // ✅ Send Welcome Email (Branded for Exam System)
+    await sendWorkflowEmail(
+      account.email,
+      account.name,
+      "Welcome to Creeer Lk Job Portal",
+      `Welcome to Creeer Lk Job Portal - Creeer Lk Job Portalty of Applied Sciences, Creeer Lk Job Portal. Your account as a **${account.role}** has been successfully created.\n\nYou can now access the dashboard to manage moderation workflows, review papers, and coordinate with the Creeer Lk Job Portalty.`
+    );
+
+
+
     return res.status(201).json({
+
       _id: account._id,
       name: account.name,
       email: account.email,
@@ -94,12 +114,24 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+    const otpCode = generateOTP();
+    await OTP.deleteMany({ email: account.email }); // Clean existing
+    const otpRecord = new OTP({ email: account.email, otp: otpCode });
+    await otpRecord.save();
+
+    // ✅ Send OTP via Branded Service (using the same otpCode)
+    const mailRes = await sendOTP(account.email, otpCode);
+
+
+    if (!mailRes.success) {
+      return res.status(500).json({ success: false, message: "Failed to send verification code." });
+    }
+
+
     return res.json({
-      _id: account._id,
-      name: account.name,
+      success: true,
+      message: "An OTP has been sent to your email address.",
       email: account.email,
-      role: account.role,
-      token: generateToken(account._id, account.role),
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -128,7 +160,7 @@ export const forgotPassword = async (req, res) => {
     user.resetTokenExpire = Date.now() + 15 * 60 * 1000; // 15 mins
     await user.save();
 
-   
+
 
     const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
 

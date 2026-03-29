@@ -9,28 +9,63 @@ import { register, login } from "../Controllers/authController.js";
 
 const router = express.Router();
 
-// ================== EMAIL TRANSPORTER ==================
-// Development mode: skip actual email sending, just log OTP to console
-const transporter = {
-  sendMail: async (options) => {
-    console.log("\n📧 EMAIL WOULD BE SENT:");
-    console.log(`   To: ${options.to}`);
-    console.log(`   Subject: ${options.subject}`);
-    // Extract OTP from HTML
-    const otpMatch = options.html.match(/style="color: #2563eb;[^>]*>(\d{6})</);
-    const otp = otpMatch ? otpMatch[1] : "OTP_NOT_FOUND";
-    console.log(`   🔑 OTP: ${otp}`);
-    console.log("   (Copy this OTP and use it to verify)\n");
-    return { messageId: "dev-mode" };
-  },
-};
+import generateToken from "../src/utils/generateToken.js";
+import { transporter, generateOTP, sendOTP } from "../src/utils/otpService.js";
 
-console.log("✅ Email transporter (DEV MODE - Console logging) is ready");
+
 // ====================
 // REGISTER & LOGIN
 // ====================
 router.post("/register", register);
-router.post("/login", login);
+router.post("/login", login); // Step 1: Verify credentials and send OTP
+router.post("/login-verify-otp", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: "Email and OTP are required." });
+    }
+
+    const trimmedEmail = email.toLowerCase().trim();
+
+    // ✅ Find OTP in database
+    const otpRecord = await OTP.findOne({ email: trimmedEmail, otp });
+
+    if (!otpRecord) {
+      return res.status(400).json({ success: false, message: "Invalid or expired OTP." });
+    }
+
+    // ✅ OTP is valid - delete it
+    await OTP.deleteOne({ _id: otpRecord._id });
+
+    // ✅ Check account existence and role
+    const account =
+      (await User.findOne({ email: trimmedEmail })) ||
+      (await Company.findOne({ email: trimmedEmail })) ||
+      (await Admin.findOne({ email: trimmedEmail }));
+
+    if (!account) {
+      return res.status(404).json({ success: false, message: "Account not found." });
+    }
+
+    // ✅ Generate Token
+    const token = generateToken(account._id, account.role);
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful!",
+      _id: account._id,
+      name: account.name,
+      email: account.email,
+      role: account.role,
+      token,
+    });
+  } catch (error) {
+    console.error("Login verify error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 
 // ====================
 // FORGOT PASSWORD - SEND OTP
@@ -55,54 +90,27 @@ router.post("/forgot-password", async (req, res) => {
       return res.status(404).json({ success: false, message: "Email not found in any account." });
     }
 
-    // ✅ Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // ✅ Generate OTP manually
+    const otpCode = generateOTP();
 
-    // ✅ Delete any previous OTP for this email
+    // ✅ Delete any previous OTP
     await OTP.deleteMany({ email: trimmedEmail });
 
-    // ✅ Save new OTP to database
-    const otpRecord = new OTP({ email: trimmedEmail, otp });
+    // ✅ Save to DB
+    const otpRecord = new OTP({ email: trimmedEmail, otp: otpCode });
     await otpRecord.save();
 
-    // ✅ Send OTP via email
-    const mailOptions = {
-      from: "kristofer.hane@ethereal.email", // Ethereal test email
-      to: trimmedEmail,
-      subject: "Password Reset OTP - Job Portal",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-          <h2 style="color: #333; text-align: center;">Password Reset Request</h2>
-          <p style="color: #666; font-size: 16px;">Hello,</p>
-          <p style="color: #666; font-size: 16px;">You have requested to reset your password. Here is your One-Time Password (OTP):</p>
-          
-          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-            <h1 style="color: #2563eb; font-size: 32px; letter-spacing: 5px; margin: 0;">${otp}</h1>
-          </div>
-          
-          <p style="color: #666; font-size: 14px;">
-            <strong>⏱️ This OTP will expire in 10 minutes.</strong>
-          </p>
-          
-          <p style="color: #666; font-size: 14px;">
-            If you did not request a password reset, please ignore this email.
-          </p>
-          
-          <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
-          <p style="color: #999; font-size: 12px; text-align: center;">
-            © 2025 Job Portal. All rights reserved.
-          </p>
-        </div>
-      `,
-    };
+    // ✅ Send the EXACT same OTP branded
+    const mailRes = await sendOTP(trimmedEmail, otpCode);
 
-    await transporter.sendMail(mailOptions);
+
 
     return res.status(200).json({
       success: true,
       message: "OTP sent to your email successfully.",
-      email: trimmedEmail, // Include email for frontend verification page
+      email: trimmedEmail,
     });
+
   } catch (error) {
     console.error("Forgot password error:", error);
     return res.status(500).json({
@@ -198,10 +206,19 @@ router.post("/reset-password", async (req, res) => {
     account.password = hashedPassword;
     await account.save();
 
+    // ✅ Send Password Change Notification
+    await sendWorkflowEmail(
+      account.email,
+      account.name,
+      "Password Successfully Reset",
+      "Your password for Creeer Lk Job Portal - Creeer Lk Job Portalty of Applied Sciences, Creeer Lk Job Portal has been successfully reset. If you did not make this change, please secure your account immediately."
+    );
+
     return res.status(200).json({
       success: true,
       message: `${accountType} password updated successfully!`,
     });
+
   } catch (error) {
     console.error("Reset password error:", error);
     return res.status(500).json({
@@ -237,58 +254,34 @@ router.post("/register-send-otp", async (req, res) => {
       });
     }
 
-    // ✅ Generate 6-digit OTP
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // ✅ Pre-generate OTP
+    const otpCode = generateOTP();
 
-    // ✅ Delete any existing OTP for this email
+    // ✅ Delete existing
     await OTP.deleteMany({ email: trimmedEmail });
 
-    // ✅ Save new OTP to database (with 10-minute TTL)
+    // ✅ Save to DB
     const otpRecord = new OTP({
       email: trimmedEmail,
       otp: otpCode,
     });
     await otpRecord.save();
 
-    // ✅ Send email via Nodemailer
-    const mailOptions = {
-      from: "noreply@jobportal.com",
-      to: trimmedEmail,
-      subject: "Email Verification - Registration OTP",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1f2937; margin-bottom: 20px;">Welcome to Job Portal!</h2>
-          <p style="color: #4b5563; font-size: 16px; margin-bottom: 20px;">
-            Hi <strong>${name || "User"}</strong>,
-          </p>
-          <p style="color: #4b5563; font-size: 16px; margin-bottom: 30px;">
-            Thank you for registering. Please verify your email address to complete your registration.
-          </p>
-          <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px;">
-            <p style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">Your verification code is:</p>
-            <p style="font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 10px 0;">
-              <span style="color: #2563eb;">${otpCode}</span>
-            </p>
-            <p style="color: #9ca3af; font-size: 13px;">This code will expire in 10 minutes</p>
-          </div>
-          <p style="color: #4b5563; font-size: 14px; margin-bottom: 20px;">
-            If you did not sign up for this account, please ignore this email.
-          </p>
-          <hr style="border: none; border-top: 1px solid #e5e7eb; margin-bottom: 20px;">
-          <p style="color: #9ca3af; font-size: 12px; text-align: center;">
-            © 2025 Job Portal. All rights reserved.
-          </p>
-        </div>
-      `,
-    };
+    // ✅ Send branded with the generated OTP
+    const mailRes = await sendOTP(trimmedEmail, otpCode);
 
-    // Send the email
-    await transporter.sendMail(mailOptions);
-
+    if (!mailRes.success) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send OTP. Please check your email configuration.",
+      });
+    }
     return res.status(200).json({
       success: true,
       message: "OTP sent successfully to your email.",
     });
+
+
   } catch (error) {
     console.error("Send registration OTP error:", error);
     return res.status(500).json({
@@ -317,22 +310,28 @@ router.post("/register-verify-otp", async (req, res) => {
     const trimmedOtp = otp.trim();
 
     // ✅ Find OTP in database
+    console.log(`Verifying OTP for: ${trimmedEmail}`);
     const otpRecord = await OTP.findOne({ email: trimmedEmail });
 
     if (!otpRecord) {
+      console.log(`❌ No OTP found in DB for: ${trimmedEmail}`);
       return res.status(404).json({
         success: false,
         message: "OTP not found or has expired. Please request a new one.",
       });
     }
 
+    console.log(`DB OTP: [${otpRecord.otp}], Received OTP: [${trimmedOtp}]`);
+
     // ✅ Verify OTP matches
     if (otpRecord.otp !== trimmedOtp) {
+      console.log(`❌ OTP Mismatch!`);
       return res.status(400).json({
         success: false,
         message: "Invalid OTP. Please try again.",
       });
     }
+
 
     // ✅ Delete OTP after successful verification (one-time use)
     await OTP.deleteOne({ _id: otpRecord._id });

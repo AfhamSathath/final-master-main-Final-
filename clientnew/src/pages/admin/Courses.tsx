@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
+import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
 import {
   Edit,
   Trash2,
@@ -23,6 +24,7 @@ type Course = {
   qualification: string;
   duration: string;
   category: string;
+  location?: string;
 
 
   courseType?: "full-time" | "part-time" | "internship";
@@ -96,6 +98,7 @@ const AdminCoursesPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [filterCategory, setFilterCategory] = useState("");
+  const [filterLocation, setFilterLocation] = useState("");
   const [filterCourseType, setFilterCourseType] = useState("");
   const [filterPaymentType, setFilterPaymentType] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -106,6 +109,7 @@ const AdminCoursesPage: React.FC = () => {
     qualification: "",
     duration: "",
     category: "",
+    location: "",
     courseType: "full-time",
     paymentType: "paid",
   });
@@ -165,14 +169,16 @@ const AdminCoursesPage: React.FC = () => {
 
   const filteredCourses = courses.filter((c) => {
     const matchesCategory = filterCategory ? c.category === filterCategory : true;
+    const matchesLocation = filterLocation ? c.location === filterLocation : true;
     const matchesCourseType = filterCourseType ? c.courseType === filterCourseType : true;
     const matchesPaymentType = filterPaymentType ? c.paymentType === filterPaymentType : true;
     const matchesSearch =
       searchTerm.trim() === "" ||
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.institution.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesCourseType && matchesPaymentType && matchesSearch;
+      c.institution.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.location || "").toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesLocation && matchesCourseType && matchesPaymentType && matchesSearch;
   });
 
   if (isLoading)
@@ -217,6 +223,16 @@ const AdminCoursesPage: React.FC = () => {
             <option value="">All Course Types</option>
             {COURSE_TYPE_OPTIONS.map((type) => (
               <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+          <select
+            value={filterLocation}
+            onChange={(e) => setFilterLocation(e.target.value)}
+            className="border rounded-lg p-3 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="">All Districts</option>
+            {SRI_LANKA_DISTRICTS.map((district) => (
+              <option key={district} value={district}>{district}</option>
             ))}
           </select>
 
@@ -298,6 +314,13 @@ const AdminCoursesPage: React.FC = () => {
                     {course.paymentType ? course.paymentType.toUpperCase() : "PAID"}
                   </span>
                 </div>
+                {course.location && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-100 px-2 py-1 rounded-md font-medium">
+                      Location: {course.location}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-purple-600" />
@@ -443,6 +466,23 @@ const AdminCoursesPage: React.FC = () => {
                 {PAYMENT_TYPE_OPTIONS.map((type) => (
                   <option key={type} value={type}>
                     {type}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={formData.location}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    location: e.target.value,
+                  })
+                }
+                className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Select District</option>
+                {SRI_LANKA_DISTRICTS.map((district) => (
+                  <option key={district} value={district}>
+                    {district}
                   </option>
                 ))}
               </select>

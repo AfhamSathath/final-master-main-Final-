@@ -4,40 +4,8 @@ import User from "../models/User.js";
 import Notification from "../models/Notification.js";
 import nodemailer from "nodemailer";
 
-const getEmailTransporter = () => {
-  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-    return nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-  }
+import { sendWorkflowEmail } from "../src/utils/otpService.js";
 
-  return {
-    sendMail: async (options) => {
-      console.log("[DEV EMAIL] To:", options.to);
-      console.log("[DEV EMAIL] Subject:", options.subject);
-      console.log("[DEV EMAIL] Text:", options.text);
-      return Promise.resolve({ messageId: "dev-email" });
-    },
-  };
-};
-
-const sendEmail = async (to, subject, text) => {
-  try {
-    const transporter = getEmailTransporter();
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER || "noreply@careerlink.lk",
-      to,
-      subject,
-      text,
-    });
-  } catch (err) {
-    console.warn("Failed to send email notification (continuing):", err.message);
-  }
-};
 
 // ================== CREATE JOB ==================
 export const createJob = async (req, res) => {
@@ -52,6 +20,7 @@ export const createJob = async (req, res) => {
       category,
       positionType,
       paymentType,
+      location,
     } = req.body;
 
     if (!title || !company || !openDate || !closeDate) {
@@ -68,6 +37,7 @@ export const createJob = async (req, res) => {
       category,
       positionType: positionType || "full-time",
       paymentType: paymentType || "paid",
+      location: location || "",
     });
 
     const savedJob = await newJob.save();
@@ -97,13 +67,15 @@ export const createJob = async (req, res) => {
 
       await Promise.all(
         matchedUsers.map((user) =>
-          sendEmail(
+          sendWorkflowEmail(
             user.email,
-            "New job alert on CareerLink LK",
-            `Hi ${user.name},\n\nA new ${qualificationMatch} job is now open at ${company}: ${title}.\nVisit the platform to apply!`
+            user.name,
+            "New Paper Moderation Assignment",
+            `A new paper titled **"${title}"** from the department of **${company}** is now available for moderation. Since your qualifications match this field (${qualificationMatch}/${category}), you have been automatically notified. Please log in to your dashboard to review the paper and provide moderation feedback before the deadline: **${new Date(closeDate).toDateString()}**.`
           )
         )
       );
+
     }
 
     res.status(201).json(savedJob);
@@ -115,12 +87,13 @@ export const createJob = async (req, res) => {
 // ================== GET ALL JOBS ==================
 export const getJobs = async (req, res) => {
   try {
-    const { search, positionType, paymentType, category } = req.query;
+    const { search, positionType, paymentType, category, location } = req.query;
 
     const filter = {};
     if (positionType) filter.positionType = positionType;
     if (paymentType) filter.paymentType = paymentType;
     if (category) filter.category = category;
+    if (location) filter.location = location;
 
     if (search) {
       const regex = new RegExp(search.toString(), "i");
@@ -130,6 +103,7 @@ export const getJobs = async (req, res) => {
         { company: regex },
         { category: regex },
         { qualification: regex },
+        { location: regex },
       ];
     }
 

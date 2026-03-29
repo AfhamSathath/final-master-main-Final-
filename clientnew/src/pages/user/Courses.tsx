@@ -6,6 +6,8 @@ import { io, Socket } from "socket.io-client";
 import toast, { Toaster } from "react-hot-toast";
 import Linkify from "react-linkify";
 
+import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
+
 interface Course {
   _id: string;
   name?: string;
@@ -16,6 +18,7 @@ interface Course {
   category?: string;
   courseType?: "full-time" | "part-time" | "online" | "offline";
   paymentType?: "paid" | "unpaid";
+  location?: string;
 }
 
 const COURSE_TYPE_OPTIONS = ["full-time", "part-time", "online", "offline"];
@@ -44,6 +47,7 @@ const CoursePage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [courseTypeFilter, setCourseTypeFilter] = useState("");
   const [paymentTypeFilter, setPaymentTypeFilter] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
   const [loading, setLoading] = useState(true);
 
   const API_BASE_URL = "http://localhost:5000/api/courses";
@@ -73,24 +77,26 @@ const CoursePage: React.FC = () => {
   }, [fetchCourses]);
 
   // ✅ Real-time updates via Socket.io
-useEffect(() => {
-  const token = localStorage.getItem("token");
-  const socket: Socket = io("http://localhost:5000", { auth: { token } });
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const socket: Socket = io("http://localhost:5000", { auth: { token } });
 
-  socket.on("connect", () => console.log("Socket connected:", socket.id));
-  socket.on("courses:update", (updatedCourses: Course[]) => {
-    setCourses(updatedCourses);
-    toast.success("Courses updated in real-time!");
-  });
-  socket.on("connect_error", (err: Error) =>
-    toast.error("Socket.io connection failed: " + err.message)
-  );
+    socket.on("connect", () => console.log("Socket connected:", socket.id));
+    socket.on("courses:update", (updatedCourses: Course[]) => {
+      setCourses(updatedCourses);
+      toast.success("Courses updated in real-time!");
+    });
+    socket.on("connect_error", (err: Error) =>
+      toast.error("Socket.io connection failed: " + err.message)
+    );
 
-  // ✅ Proper cleanup — return a function, not the socket itself
-  return () => {
-    socket.disconnect();
-  };
-}, []);
+    // ✅ Proper cleanup — return a function, not the socket itself
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  // no user district persistence; simple location filter only
 
   // ✅ Filter logic
   const filteredCourses = courses.filter((course) => {
@@ -113,8 +119,9 @@ useEffect(() => {
 
     const matchCourseType = courseTypeFilter ? course.courseType === courseTypeFilter : true;
     const matchPaymentType = paymentTypeFilter ? course.paymentType === paymentTypeFilter : true;
+    const matchLocation = locationFilter ? (course.location || "") === locationFilter : true;
 
-    return matchCategory && matchSearch && matchQualification && matchCourseType && matchPaymentType;
+    return matchCategory && matchSearch && matchQualification && matchCourseType && matchPaymentType && matchLocation;
   });
 
   // ✅ Category counts
@@ -170,6 +177,19 @@ useEffect(() => {
           onChange={(e) => setQualificationFilter(e.target.value)}
           className="w-full md:w-80 border-2 border-green-400 focus:border-green-600"
         />
+
+        <select
+          value={locationFilter}
+          onChange={(e) => setLocationFilter(e.target.value)}
+          className="w-full md:w-80 border-2 border-blue-400 focus:border-blue-600 rounded-lg p-2"
+        >
+          <option value="">All Districts</option>
+          {SRI_LANKA_DISTRICTS.map((district) => (
+            <option key={district} value={district}>
+              {district}
+            </option>
+          ))}
+        </select>
 
         <select
           value={courseTypeFilter}
@@ -258,6 +278,12 @@ useEffect(() => {
                   <p className="text-sm font-medium bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full inline-block">
                     Payment: {course.paymentType ? course.paymentType.toUpperCase() : "N/A"}
                   </p>
+
+                  {course.location && (
+                    <p className="text-sm font-medium bg-blue-100 text-blue-800 px-3 py-1 rounded-full inline-block">
+                      Location: {course.location}
+                    </p>
+                  )}
 
                   <p className="text-sm font-medium bg-green-100 text-green-800 px-3 py-1 rounded-full inline-block">
                     Qualification: {course.qualification || "N/A"}

@@ -1,11 +1,14 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
 import bcrypt from "bcryptjs";
-import dotenv from "dotenv";
 import http from "http";
 import { Server } from "socket.io";
 import connectDB from "./db.js";
 import User from "./models/User.js";
+
 
 
 
@@ -19,8 +22,6 @@ import adminRoutes from "./Routes/adminRoutes.js";
 import verifyCompanyRoute from "./Routes/verifyCompany.js";
 import duplicateCheckRouter from "./Routes/checkDuplicate.js";
 
-
-dotenv.config();
 connectDB();
 
 const app = express();

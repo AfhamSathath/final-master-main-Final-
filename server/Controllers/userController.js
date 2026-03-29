@@ -1,5 +1,8 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import { sendWorkflowEmail } from "../src/utils/otpService.js";
+
+
 
 // ================== CREATE USER ==================
 export const createUser = async (req, res) => {
@@ -30,7 +33,18 @@ export const createUser = async (req, res) => {
     });
 
     await newUser.save();
+
+    // ✅ Send Welcome Email (Branded for Exam System)
+    await sendWorkflowEmail(
+      newUser.email,
+      newUser.name,
+      "Welcome to the Job Portal",
+      `Your account has been successfully created in the Job Portal - Creeer Lk Job Portalty of Applied Sciences, Creeer Lk Job Portal. Your role is set as **${newUser.role}**.\n\nYou can now log in to manage paper assignments and moderation workflows.`
+    );
+
+
     res.status(201).json({ message: "User created successfully", user: newUser });
+
   } catch (error) {
     res.status(500).json({ message: "Error creating user", error: error.message });
   }
@@ -72,7 +86,17 @@ export const updateUser = async (req, res) => {
     const user = await User.findByIdAndUpdate(req.params.id, updatedData, { new: true }).select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // ✅ Send Update Email (Security Alert)
+    await sendWorkflowEmail(
+      user.email,
+      user.name,
+      "Security Alert: Profile Updated",
+      "This is a notification from Creeer Lk Job Portal. Your profile information was recently updated. If you did not perform this action, please contact the Creeer Lk Job Portalty administrator immediately."
+    );
+
+
     res.status(200).json({ message: "User updated successfully", user });
+
   } catch (error) {
     res.status(500).json({ message: "Error updating user", error: error.message });
   }

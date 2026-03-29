@@ -3,6 +3,9 @@ import Company from "../models/Company.js";
 import Admin from "../models/admin.js";
 import bcrypt from "bcryptjs";
 import generateToken from "../src/utils/generateToken.js";
+import { sendWorkflowEmail } from "../src/utils/otpService.js";
+
+
 
 // ================= REGISTER =================
 export const register = async (req, res) => {
@@ -145,6 +148,16 @@ export const createAdmin = async (req, res) => {
       role: "admin",
     });
 
+    // ✅ Send Admin Creation Email (Branded for Exam System)
+    await sendWorkflowEmail(
+      newAdmin.email,
+      newAdmin.name,
+      "Administrative Access Granted",
+      `You have been appointed as an administrator for Creeer Lk Job Portal - Creeer Lk Job Portalty of Applied Sciences, Creeer Lk Job Portal. Your account has been successfully initialized.\n\nPlease log in to manage the system configurations and user accounts.`
+    );
+
+
+
     res.status(201).json({
       _id: newAdmin._id,
       name: newAdmin.name,
@@ -171,7 +184,17 @@ export const updateAdmin = async (req, res) => {
 
     if (!updatedAdmin) return res.status(404).json({ message: "Admin not found" });
 
+    // ✅ Send Admin Update Notification (Security Alert)
+    await sendWorkflowEmail(
+      updatedAdmin.email,
+      updatedAdmin.name,
+      "Security Alert: Admin Profile Updated",
+      "Your administrative profile was recently updated in Creeer Lk Job Portal. If you did not perform this update, please contact the lead administrator or the departmental security officer."
+    );
+
+
     res.status(200).json(updatedAdmin);
+
   } catch (error) {
     console.error("Update Admin error:", error);
     res.status(500).json({ message: "Failed to update admin" });

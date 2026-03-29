@@ -5,6 +5,7 @@ import { Loader2, Search } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import toast, { Toaster } from "react-hot-toast";
 import Linkify from "react-linkify";
+import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
 
 interface Company {
   name?: string;
@@ -19,7 +20,13 @@ interface Job {
   openDate?: string;
   closeDate?: string;
   category?: string;
+  positionType?: "full-time" | "part-time" | "internship";
+  paymentType?: "paid" | "unpaid";
+  location?: string;
 }
+
+const JOB_TYPE_OPTIONS = ["full-time", "part-time", "internship"];
+const PAYMENT_TYPE_OPTIONS = ["paid", "unpaid"];
 
 const STANDARD_CATEGORIES = [
   "Information Technology",
@@ -42,6 +49,9 @@ const JobPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [qualificationFilter, setQualificationFilter] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [jobTypeFilter, setJobTypeFilter] = useState("");
+  const [paymentTypeFilter, setPaymentTypeFilter] = useState("");
   const [loading, setLoading] = useState(true);
 
   const API_BASE_URL = "http://localhost:5000/api/jobs";
@@ -99,6 +109,9 @@ const JobPage: React.FC = () => {
     const matchCategory =
       selectedCategory === "All" || jobCategory === selectedCategory;
 
+    const matchesLocation =
+      !locationFilter || (job.location || "").toLowerCase() === locationFilter.toLowerCase();
+
     const companyName = getCompanyName(job.company).toLowerCase();
     const query = searchTerm.toLowerCase();
     const matchSearch =
@@ -115,7 +128,20 @@ const JobPage: React.FC = () => {
       (qFilter.includes("al") && qual.includes("a/l")) ||
       (qFilter.includes("ol") && qual.includes("o/l"));
 
-    return matchCategory && matchSearch && matchQualification;
+    const matchJobType =
+      !jobTypeFilter || (job.positionType || "").toLowerCase() === jobTypeFilter.toLowerCase();
+
+    const matchPaymentType =
+      !paymentTypeFilter || (job.paymentType || "").toLowerCase() === paymentTypeFilter.toLowerCase();
+
+    return (
+      matchCategory &&
+      matchesLocation &&
+      matchSearch &&
+      matchQualification &&
+      matchJobType &&
+      matchPaymentType
+    );
   });
 
   const categoryCounts: Record<string, number> = {};
@@ -168,6 +194,40 @@ const JobPage: React.FC = () => {
           onChange={(e) => setQualificationFilter(e.target.value)}
           className="w-full md:w-80 border-2 border-green-400 focus:border-green-600"
         />
+
+        <select
+          value={locationFilter}
+          onChange={(e) => setLocationFilter(e.target.value)}
+          className="w-full md:w-80 border-2 border-blue-400 focus:border-blue-600 rounded-lg p-2"
+        >
+          <option value="">All Districts</option>
+          {SRI_LANKA_DISTRICTS.map((district) => (
+            <option key={district} value={district}>{district}</option>
+          ))}
+        </select>
+
+        <select
+          value={jobTypeFilter}
+          onChange={(e) => setJobTypeFilter(e.target.value)}
+          className="w-full md:w-44 border-2 border-purple-400 focus:border-purple-600 rounded-lg p-2"
+        >
+          <option value="">All Types</option>
+          {JOB_TYPE_OPTIONS.map((type) => (
+            <option key={type} value={type}>{type}</option>
+          ))}
+        </select>
+
+        <select
+          value={paymentTypeFilter}
+          onChange={(e) => setPaymentTypeFilter(e.target.value)}
+          className="w-full md:w-44 border-2 border-yellow-400 focus:border-yellow-600 rounded-lg p-2"
+        >
+          <option value="">All Payments</option>
+          {PAYMENT_TYPE_OPTIONS.map((type) => (
+            <option key={type} value={type}>{type}</option>
+          ))}
+        </select>
+
       </div>
 
       {/* Category Tabs */}
@@ -226,6 +286,12 @@ const JobPage: React.FC = () => {
                 <p className="text-sm font-medium bg-green-100 text-green-800 px-3 py-1 rounded-full inline-block mb-2">
                   Qualification: {job.qualification || "N/A"}
                 </p>
+
+                {job.location && (
+                  <p className="text-sm font-medium bg-blue-100 text-blue-800 px-3 py-1 rounded-full inline-block mb-2">
+                    Location: {job.location}
+                  </p>
+                )}
 
                 <div className="text-sm bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded-md text-gray-700 mb-3">
                   <strong>Open:</strong>{" "}

@@ -1,6 +1,9 @@
 import Company from "../models/Company.js";
 import bcrypt from "bcryptjs";
 import generateToken from "../src/utils/generateToken.js";
+import { sendWorkflowEmail } from "../src/utils/otpService.js";
+
+
 import * as fs from "fs";
 import path from "path";
 import multer from "multer";
@@ -95,7 +98,17 @@ export const createCompany = [
 
       await newCompany.save();
 
+      // ✅ Send Confirmation Email (Branded for Exam System)
+      await sendWorkflowEmail(
+        newCompany.email,
+        newCompany.name,
+        "Account Created - Creeer Lk Job Portal",
+        `Your account for **${newCompany.name}** has been successfully created in Creeer Lk Job Portal - Creeer Lk Job Portalty of Applied Sciences, Creeer Lk Job Portal. You have been assigned the role of **Moderator/HOD**.\n\nYou can now log in to oversee the moderation process.`
+      );
+
+
       res.status(201).json({
+
         message: "Company created successfully",
         company: {
           _id: newCompany._id,
@@ -158,7 +171,17 @@ export const updateCompany = async (req, res) => {
 
     if (!company) return res.status(404).json({ message: "Company not found" });
 
+    // ✅ Send Update Notification (Security Alert)
+    await sendWorkflowEmail(
+      company.email,
+      company.name,
+      "Security Alert: Profile Updated",
+      "Your company profile in Creeer Lk Job Portal was recently updated. If you did not authorize this change, please contact the Creeer Lk Job Portalty administrator immediately."
+    );
+
+
     res.status(200).json({ message: "Company updated successfully", company });
+
   } catch (error) {
     res.status(500).json({ message: "Error updating company", error: error.message });
   }

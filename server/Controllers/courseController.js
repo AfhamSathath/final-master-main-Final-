@@ -4,41 +4,8 @@ import User from "../models/User.js";
 import Notification from "../models/Notification.js";
 import nodemailer from "nodemailer";
 
-const getEmailTransporter = () => {
-  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-    return nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-  }
+import { sendWorkflowEmail } from "../src/utils/otpService.js";
 
-  // dev logger transport
-  return {
-    sendMail: async (options) => {
-      console.log("[DEV EMAIL] To:", options.to);
-      console.log("[DEV EMAIL] Subject:", options.subject);
-      console.log("[DEV EMAIL] Text:", options.text);
-      return Promise.resolve({ messageId: "dev-email" });
-    },
-  };
-};
-
-const sendEmail = async (to, subject, text) => {
-  try {
-    const transporter = getEmailTransporter();
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER || "noreply@careerlink.lk",
-      to,
-      subject,
-      text,
-    });
-  } catch (err) {
-    console.warn("Failed to send email notification (continuing):", err.message);
-  }
-};
 
 // ================== CREATE COURSE ==================
 export const createCourse = async (req, res) => {
@@ -52,6 +19,7 @@ export const createCourse = async (req, res) => {
       category,
       courseType,
       paymentType,
+      location,
     } = req.body;
 
     if (!name || !institution) {
@@ -67,6 +35,7 @@ export const createCourse = async (req, res) => {
       category,
       courseType: courseType || "full-time",
       paymentType: paymentType || "paid",
+      location: location || "",
     });
 
     const savedCourse = await newCourse.save();
@@ -96,13 +65,15 @@ export const createCourse = async (req, res) => {
 
       await Promise.all(
         matchedUsers.map((user) =>
-          sendEmail(
+          sendWorkflowEmail(
             user.email,
-            "New course alert on CareerLink LK",
-            `Hi ${user.name},\n\nA new ${qualificationMatch} course is now available: ${name} at ${institution}.\nVisit the platform to learn more!`
+            user.name,
+            "New Course/Syllabus for Review",
+            `A new course syllabus/module titled **"${name}"** has been proposed at **${institution}**. You are being notified based on your registered academic interests. Please log in to review the module details and requirements.`
           )
         )
       );
+
     }
 
     res.status(201).json(savedCourse);
@@ -115,12 +86,13 @@ export const createCourse = async (req, res) => {
 // ================== GET ALL COURSES ==================
 export const getCourses = async (req, res) => {
   try {
-    const { search, courseType, paymentType, category } = req.query;
+    const { search, courseType, paymentType, category, location } = req.query;
 
     const filter = {};
     if (courseType) filter.courseType = courseType;
     if (paymentType) filter.paymentType = paymentType;
     if (category) filter.category = category;
+    if (location) filter.location = location;
 
     if (search) {
       const regex = new RegExp(search.toString(), "i");
@@ -130,6 +102,7 @@ export const getCourses = async (req, res) => {
         { institution: regex },
         { category: regex },
         { qualification: regex },
+        { location: regex },
       ];
     }
 
