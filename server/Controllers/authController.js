@@ -6,7 +6,8 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import generateToken from "../src/utils/generateToken.js";
-import { transporter, generateOTP, sendWorkflowEmail, sendOTP } from "../src/utils/otpService.js";
+import { transporter, generateOTP, sendWorkflowEmail, sendOTP, sendMagicLink, sendAccountCreatedAlert, sendLoginAlert } from "../src/utils/otpService.js";
+
 
 import OTP from "../models/OTP.js";
 
@@ -65,14 +66,8 @@ export const register = async (req, res) => {
 
     await account.save();
 
-    // ✅ Send Welcome Email (Branded for Exam System)
-    await sendWorkflowEmail(
-      account.email,
-      account.name,
-      "Welcome to the Qualification Based Job Finder System",
-      `Welcome to the Qualification Based Job Finder System for Sri Lanka. Your account as a **${account.role}** has been successfully created.\n\nYou can now access the dashboard to manage your qualifications, explore job opportunities, and find the best education paths.`
-
-    );
+    // ✅ Send Account Creation Email (Branded for QJC)
+    await sendAccountCreatedAlert(account.email, account.name, account.role);
 
 
 
@@ -93,7 +88,7 @@ export const register = async (req, res) => {
 // ================= LOGIN =================
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, useMagicLink } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: "Please provide email and password" });
@@ -115,27 +110,106 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+    // Check if OTP is REQUIRED for this user
+    if (account.otpRequired === false) {
+      // Async alert
+      sendLoginAlert(account.email, account.name).catch(console.error);
+
+      // Direct Login
+      return res.status(200).json({
+        success: true,
+        message: "Login successful!",
+        _id: account._id,
+        name: account.name,
+        email: account.email,
+        role: account.role,
+        token: generateToken(account._id, account.role),
+      });
+    }
+
+    // If useMagicLink is true, send Magic Link instead of OTP
+    if (useMagicLink) {
+      const token = crypto.randomBytes(32).toString("hex");
+      account.magicToken = token;
+      account.magicTokenExpiry = Date.now() + 15 * 60 * 1000; // 15 mins
+      await account.save();
+
+      const frontendUrl = process.env.CLIENT_URL || "http://localhost:8080";
+      const magicLink = `${frontendUrl}/magic-login?token=${token}&email=${account.email}`;
+
+      const mailRes = await sendMagicLink(account.email, account.name, magicLink);
+      if (!mailRes.success) {
+        return res.status(500).json({ success: false, message: "Failed to send login link." });
+      }
+
+      return res.json({
+        success: true,
+        message: "A secure 'It's Me' login link has been sent to your email.",
+        type: "magic-link"
+      });
+    }
+
+    // Default: Send OTP
     const otpCode = generateOTP();
     await OTP.deleteMany({ email: account.email }); // Clean existing
     const otpRecord = new OTP({ email: account.email, otp: otpCode });
     await otpRecord.save();
 
-    // ✅ Send OTP via Branded Service (using the same otpCode)
     const mailRes = await sendOTP(account.email, otpCode);
-
-
     if (!mailRes.success) {
       return res.status(500).json({ success: false, message: "Failed to send verification code." });
     }
-
 
     return res.json({
       success: true,
       message: "An OTP has been sent to your email address.",
       email: account.email,
+      type: "otp"
     });
   } catch (error) {
     console.error("Login error:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ================= MAGIC LOGIN VERIFY =================
+export const magicLogin = async (req, res) => {
+  try {
+    const { token, email } = req.query;
+    if (!token || !email) {
+      return res.status(400).json({ message: "Missing token or email" });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const account =
+      (await User.findOne({ email: normalizedEmail, magicToken: token, magicTokenExpiry: { $gt: Date.now() } })) ||
+      (await Company.findOne({ email: normalizedEmail, magicToken: token, magicTokenExpiry: { $gt: Date.now() } })) ||
+      (await Admin.findOne({ email: normalizedEmail, magicToken: token, magicTokenExpiry: { $gt: Date.now() } }));
+
+    if (!account) {
+      return res.status(401).json({ message: "Invalid or expired login link" });
+    }
+
+    // Clear the token
+    account.magicToken = undefined;
+    account.magicTokenExpiry = undefined;
+    await account.save();
+
+    // Async alert
+    sendLoginAlert(account.email, account.name).catch(console.error);
+
+    return res.json({
+      success: true,
+      message: "Authentication successful!",
+      _id: account._id,
+      name: account.name,
+      email: account.email,
+      role: account.role,
+      token: generateToken(account._id, account.role),
+    });
+  } catch (error) {
+    console.error("Magic login error:", error);
     return res.status(500).json({ message: "Server error" });
   }
 };

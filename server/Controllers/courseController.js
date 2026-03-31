@@ -1,10 +1,12 @@
 // controllers/courseController.js
 import Course from "../models/Course.js";
 import User from "../models/User.js";
+import Admin from "../models/admin.js";
 import Notification from "../models/Notification.js";
 import nodemailer from "nodemailer";
+import Company from "../models/Company.js";
 
-import { sendWorkflowEmail } from "../src/utils/otpService.js";
+import { sendWorkflowEmail, sendCourseAlert, sendCompanyActionAlert, sendAlertEmail, sendClosingSoonScenarioAlert } from "../src/utils/otpService.js";
 
 
 // ================== CREATE COURSE ==================
@@ -20,6 +22,7 @@ export const createCourse = async (req, res) => {
       courseType,
       paymentType,
       location,
+      closeDate,
     } = req.body;
 
     if (!name || !institution) {
@@ -36,25 +39,33 @@ export const createCourse = async (req, res) => {
       courseType: courseType || "full-time",
       paymentType: paymentType || "paid",
       location: location || "",
+      closeDate,
     });
 
     const savedCourse = await newCourse.save();
 
     const qualificationMatch = qualification && qualification.trim();
-    if (qualificationMatch) {
-      const matchedUsers = await User.find({
-        role: "user",
-        $or: [
-          { qualification: { $regex: new RegExp(`^${qualificationMatch}$`, "i") } },
-          { qualificationCategory: { $regex: new RegExp(`^${category}$`, "i") } },
-        ],
-      });
+    const categoryMatch = category && category.trim();
+
+    if (qualificationMatch || categoryMatch) {
+      const query = { role: "user", $or: [] };
+      if (qualificationMatch) query.$or.push({ qualification: { $regex: new RegExp(`^${qualificationMatch}$`, "i") } });
+      if (categoryMatch) query.$or.push({ qualificationCategory: { $regex: new RegExp(`^${categoryMatch}$`, "i") } });
+
+      const matchedUsers = await User.find(query);
+
+      const in3Days = new Date();
+      in3Days.setDate(in3Days.getDate() + 3);
+      const courseCloseDate = closeDate ? new Date(closeDate) : null;
+      const isClosingSoon = courseCloseDate && courseCloseDate <= in3Days;
 
       const notifications = matchedUsers.map((user) => ({
         userId: user._id,
         type: "course",
-        title: `New course: ${name}`,
-        message: `New ${qualificationMatch} course available at ${institution}: ${name}.`,
+        title: isClosingSoon ? `Course closing soon: ${name}` : `🎓 New Course Alert: ${name}`,
+        message: isClosingSoon 
+          ? `Deadline approaching for ${name} at ${institution}. Closes on ${courseCloseDate.toDateString()}.`
+          : `New ${qualificationMatch} course available at ${institution}: ${name}. Enrollment closes on ${courseCloseDate ? courseCloseDate.toLocaleDateString() : 'N/A'}.`,
         referenceId: savedCourse._id,
         read: false,
       }));
@@ -64,17 +75,34 @@ export const createCourse = async (req, res) => {
       }
 
       await Promise.all(
-        matchedUsers.map((user) =>
-          sendWorkflowEmail(
-            user.email,
-            user.name,
-            "New Education Module Alert",
-            `A new qualification-based education module titled **"${name}"** is now available at **${institution}**. This module aligns with your profile interests. Log in to explore the curriculum and enrollment details.`
+        matchedUsers.map((user) => {
+            if (isClosingSoon) {
+               return sendClosingSoonScenarioAlert(user.email, user.name, "Course Enrollment", name, institution, closeDate);
+            } else {
+               return sendCourseAlert(user.email, user.name, "Created", name, institution, closeDate);
+            }
+        })
+      );
 
+      // ✅ Notify Admins about the new course posting
+      const admins = await Admin.find({});
+      await Promise.all(
+        admins.map((admin) =>
+          sendWorkflowEmail(
+            admin.email,
+            admin.name,
+            "New Education Module Alert",
+            `A new course has been posted on the platform:\n\n**Name:** ${name}\n**Institution:** ${institution}\n**Category:** ${category}\n\nPlease review the posting in the admin panel.`
           )
         )
       );
+    }
 
+    // ✅ Notify the Company/Institution that Course was Created
+    let institutionAccount = await Company.findOne({ name: institution });
+    if (!institutionAccount) institutionAccount = await Admin.findOne({ name: institution });
+    if (institutionAccount) {
+      await sendCompanyActionAlert(institutionAccount.email, institutionAccount.name, "Course", "Created", name, null, closeDate);
     }
 
     res.status(201).json(savedCourse);
@@ -142,6 +170,30 @@ export const updateCourse = async (req, res) => {
       return res.status(404).json({ error: "Course not found" });
     }
 
+    // Notify matched users about the update
+    const qualificationMatch = updatedCourse.qualification && updatedCourse.qualification.trim();
+    const categoryMatch = updatedCourse.category && updatedCourse.category.trim();
+
+    if (qualificationMatch || categoryMatch) {
+      const query = { role: "user", $or: [] };
+      if (qualificationMatch) query.$or.push({ qualification: { $regex: new RegExp(`^${qualificationMatch}$`, "i") } });
+      if (categoryMatch) query.$or.push({ qualificationCategory: { $regex: new RegExp(`^${categoryMatch}$`, "i") } });
+
+      const matchedUsers = await User.find(query);
+      await Promise.all(
+        matchedUsers.map((user) =>
+          sendCourseAlert(user.email, user.name, "Updated", updatedCourse.name, updatedCourse.institution, updatedCourse.closeDate)
+        )
+      );
+    }
+
+    // ✅ Notify the Company/Institution that Course was Updated
+    let institutionAccount = await Company.findOne({ name: updatedCourse.institution });
+    if (!institutionAccount) institutionAccount = await Admin.findOne({ name: updatedCourse.institution });
+    if (institutionAccount) {
+      await sendCompanyActionAlert(institutionAccount.email, institutionAccount.name, "Course", "Updated", updatedCourse.name, null, updatedCourse.closeDate);
+    }
+
     res.status(200).json(updatedCourse);
   } catch (error) {
     console.error("❌ Error updating course:", error);
@@ -156,6 +208,30 @@ export const deleteCourse = async (req, res) => {
 
     if (!deletedCourse) {
       return res.status(404).json({ error: "Course not found" });
+    }
+
+    // Notify matched users that the course was removed
+    const qualificationMatch = deletedCourse.qualification && deletedCourse.qualification.trim();
+    const categoryMatch = deletedCourse.category && deletedCourse.category.trim();
+
+    if (qualificationMatch || categoryMatch) {
+      const query = { role: "user", $or: [] };
+      if (qualificationMatch) query.$or.push({ qualification: { $regex: new RegExp(`^${qualificationMatch}$`, "i") } });
+      if (categoryMatch) query.$or.push({ qualificationCategory: { $regex: new RegExp(`^${categoryMatch}$`, "i") } });
+
+      const matchedUsers = await User.find(query);
+      await Promise.all(
+        matchedUsers.map((user) =>
+          sendCourseAlert(user.email, user.name, "Deleted", deletedCourse.name, deletedCourse.institution, deletedCourse.closeDate)
+        )
+      );
+    }
+
+    // ✅ Notify the Company/Institution that Course was Deleted
+    let institutionAccount = await Company.findOne({ name: deletedCourse.institution });
+    if (!institutionAccount) institutionAccount = await Admin.findOne({ name: deletedCourse.institution });
+    if (institutionAccount) {
+      await sendCompanyActionAlert(institutionAccount.email, institutionAccount.name, "Course", "Deleted", deletedCourse.name, null, deletedCourse.closeDate);
     }
 
     // Remove associated notifications for the deleted course

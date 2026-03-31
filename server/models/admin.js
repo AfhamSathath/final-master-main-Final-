@@ -21,6 +21,10 @@ const adminSchema = new mongoose.Schema({
   },
   resetToken: { type: String },
   resetTokenExpiry: { type: Date },
+  
+  otpRequired: { type: Boolean, default: true },
+  magicToken: { type: String },
+  magicTokenExpiry: { type: Date },
 
   
 }, {

@@ -98,7 +98,7 @@ export const createCompany = [
 
       await newCompany.save();
 
-      // ✅ Send Confirmation Email (Branded for Exam System)
+      // ✅ Send Confirmation Email (Branded for QJC)
       await sendWorkflowEmail(
         newCompany.email,
         newCompany.name,

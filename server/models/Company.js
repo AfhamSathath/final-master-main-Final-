@@ -11,6 +11,13 @@ const companySchema = new mongoose.Schema(
     password: { type: String, required: true },
     address: { type: String },
     role: { type: String, default: "company" },
+
+    resetToken: { type: String },
+    resetTokenExpiry: { type: Date },
+
+    otpRequired: { type: Boolean, default: true },
+    magicToken: { type: String },
+    magicTokenExpiry: { type: Date },
   },
   { timestamps: true }
 );

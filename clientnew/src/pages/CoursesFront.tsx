@@ -15,12 +15,12 @@ interface Course {
   qualification?: string;
   duration?: string;
   category?: string;
-  courseType?: "full-time" | "part-time" | "internship";
+  courseType?: "full-time" | "part-time";
   paymentType?: "paid" | "unpaid";
   location?: string;
 }
 
-const COURSE_TYPE_OPTIONS = ["full-time", "part-time", "internship"];
+const COURSE_TYPE_OPTIONS = ["full-time", "part-time"];
 const PAYMENT_TYPE_OPTIONS = ["paid", "unpaid"];
 
 const CoursePage: React.FC = () => {

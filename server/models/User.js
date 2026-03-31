@@ -8,7 +8,11 @@ const userSchema = new mongoose.Schema({
 
   contactNumber: String,
   location: String,
-   resetToken: { type: String },
+  resetToken: { type: String },
+  resetTokenExpiry: { type: Date },
+  otpRequired: { type: Boolean, default: true },
+  magicToken: { type: String },
+  magicTokenExpiry: { type: Date },
   resetTokenExpiry: { type: Date },
   
   
@@ -16,11 +20,7 @@ const userSchema = new mongoose.Schema({
 
   qualificationCategory: { type: String, default: "" },
   qualification: { type: String, default: "" },
-  contactNumber: String,
-  location: String,
-  resetToken: { type: String },
-  resetTokenExpiry: { type: Date },
+}, { timestamps: true });
 
-});
 
 export default mongoose.model("User", userSchema);

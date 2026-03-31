@@ -24,17 +24,39 @@ const registerValidationSchema = z
     confirmPassword: z.string().min(1, "Confirm password is required"),
     regNumber: z.string().optional(),
     address: z.string().optional(),
-
-
-    qualificationCategory: z.enum(["Information Technology", "Business & Management", "Engineering", "Digital Marketing", "Healthcare"]).optional(),
-    qualification: z.string().min(2, "Qualification is required for users").optional(),
-
+    qualificationCategory: z.string().optional(),
+    qualification: z.string().optional(),
     userType: z.enum(["user", "company"]),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
-  });
+  })
+  .refine(
+    (data) => {
+      if (data.userType === "user") {
+        return !!data.qualification && data.qualification.length >= 2;
+      }
+      return true;
+    },
+    {
+      message: "Qualification is required for users",
+      path: ["qualification"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.userType === "user") {
+        const validCategories = ["Information Technology", "Business & Management", "Engineering", "Digital Marketing", "Healthcare"];
+        return !!data.qualificationCategory && validCategories.includes(data.qualificationCategory);
+      }
+      return true;
+    },
+    {
+      message: "Please select a valid qualification category",
+      path: ["qualificationCategory"],
+    }
+  );
 
 interface RegisterData {
   name: string;

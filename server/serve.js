@@ -8,6 +8,7 @@ import http from "http";
 import { Server } from "socket.io";
 import connectDB from "./db.js";
 import User from "./models/User.js";
+import startNotificationScheduler from "./src/utils/notificationScheduler.js";
 
 
 
@@ -23,6 +24,7 @@ import verifyCompanyRoute from "./Routes/verifyCompany.js";
 import duplicateCheckRouter from "./Routes/checkDuplicate.js";
 
 connectDB();
+startNotificationScheduler();
 
 const app = express();
 const PORT = process.env.PORT || 5000;

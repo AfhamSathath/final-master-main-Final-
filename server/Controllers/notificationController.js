@@ -2,6 +2,7 @@ import Notification from "../models/Notification.js";
 import User from "../models/User.js";
 import Job from "../models/Job.js";
 import Course from "../models/Course.js";
+import { sendAlertEmail } from "../src/utils/otpService.js";
 
 const getUserId = (req) => req.user?.id || req.query.userId || req.params.userId;
 
@@ -78,40 +79,51 @@ export const syncNearDeadlineAndRecentAlerts = async (req, res) => {
       await Notification.deleteMany({ userId, type: "course", referenceId: { $in: expiredCourseIds } });
     }
 
-    const jobs = await Job.find({ closeDate: { $gte: now, $lte: in3Days } });
-    const courses = await Course.find({ createdAt: { $gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } });
+    const deadlineJobs = await Job.find({ closeDate: { $gte: now, $lte: in3Days } });
+    const deadlineCourses = await Course.find({ closeDate: { $gte: now, $lte: in3Days } });
 
     const alertPromises = [];
 
-    for (const job of jobs) {
+    for (const job of deadlineJobs) {
       if (!isQualificationMatch(user, job.qualification, job.category)) continue;
       const exists = await Notification.exists({ userId, type: "job", referenceId: job._id });
       if (!exists) {
+        const oDate = job.openDate ? new Date(job.openDate).toDateString() : "Not Specified";
+        const cDate = job.closeDate ? new Date(job.closeDate).toDateString() : "Not Specified";
+        const emailMsg = `Deadline approaching for ${job.title} at ${job.company}.\n\n**Opening Date:** ${oDate}\n**Closing Date:** ${cDate}\n\nLog in to your dashboard to review details.`;
+
         alertPromises.push(
           Notification.create({
             userId,
             type: "job",
             title: `Job closing soon: ${job.title}`,
-            message: `Deadline approaching for ${job.title} at ${job.company}. Closes on ${job.closeDate.toDateString()}.`,
+            message: `Deadline approaching for ${job.title} at ${job.company}. Closes on ${cDate}.`,
             referenceId: job._id,
           })
         );
+        
+        sendAlertEmail(user.email, user.name, `⏰ Job closing soon: ${job.title}`, emailMsg).catch(console.error);
       }
     }
 
-    for (const course of courses) {
+    for (const course of deadlineCourses) {
       if (!isQualificationMatch(user, course.qualification, course.category)) continue;
       const exists = await Notification.exists({ userId, type: "course", referenceId: course._id });
       if (!exists) {
+        const cDate = course.closeDate ? new Date(course.closeDate).toDateString() : "Not Specified";
+        const emailMsg = `Deadline approaching for course: ${course.name} at ${course.institution}.\n\n**Enrollment Deadline:** ${cDate}\n\nLog in to your dashboard to enroll before spots fill up.`;
+
         alertPromises.push(
           Notification.create({
             userId,
             type: "course",
-            title: `New course for your qualification: ${course.name}`,
-            message: `New course at ${course.institution}: ${course.name}.`,
+            title: `Course closing soon: ${course.name}`,
+            message: `Deadline approaching for ${course.name} at ${course.institution}. Closes on ${cDate}.`,
             referenceId: course._id,
           })
         );
+        
+        sendAlertEmail(user.email, user.name, `⏰ Course closing soon: ${course.name}`, emailMsg).catch(console.error);
       }
     }
 

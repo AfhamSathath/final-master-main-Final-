@@ -1,10 +1,12 @@
 // controllers/JobController.js
 import Job from "../models/Job.js";
 import User from "../models/User.js";
+import Admin from "../models/admin.js";
 import Notification from "../models/Notification.js";
 import nodemailer from "nodemailer";
+import Company from "../models/Company.js";
 
-import { sendWorkflowEmail } from "../src/utils/otpService.js";
+import { sendWorkflowEmail, sendJobAlert, sendCompanyActionAlert, sendAlertEmail, sendClosingSoonScenarioAlert } from "../src/utils/otpService.js";
 
 
 // ================== CREATE JOB ==================
@@ -43,20 +45,28 @@ export const createJob = async (req, res) => {
     const savedJob = await newJob.save();
 
     const qualificationMatch = qualification && qualification.trim();
-    if (qualificationMatch) {
-      const matchedUsers = await User.find({
-        role: "user",
-        $or: [
-          { qualification: { $regex: new RegExp(`^${qualificationMatch}$`, "i") } },
-          { qualificationCategory: { $regex: new RegExp(`^${category}$`, "i") } },
-        ],
-      });
+    const categoryMatch = category && category.trim();
 
+    if (qualificationMatch || categoryMatch) {
+      const query = { role: "user", $or: [] };
+      if (qualificationMatch) query.$or.push({ qualification: { $regex: new RegExp(`^${qualificationMatch}$`, "i") } });
+      if (categoryMatch) query.$or.push({ qualificationCategory: { $regex: new RegExp(`^${categoryMatch}$`, "i") } });
+
+      const matchedUsers = await User.find(query);
+
+      const in3Days = new Date();
+      in3Days.setDate(in3Days.getDate() + 3);
+      const jobCloseDate = closeDate ? new Date(closeDate) : null;
+      const isClosingSoon = jobCloseDate && jobCloseDate <= in3Days;
+
+      // Create In-App Notifications
       const notifications = matchedUsers.map((user) => ({
         userId: user._id,
         type: "job",
-        title: `New job: ${title}`,
-        message: `New ${qualificationMatch} job opening at ${company}: ${title}.`,
+        title: isClosingSoon ? `Job closing soon: ${title}` : `🚀 New Job Opportunity: ${title}`,
+        message: isClosingSoon 
+          ? `Deadline approaching for ${title} at ${company}. Closes on ${jobCloseDate.toDateString()}.`
+          : `A new ${qualificationMatch} job opening at ${company} is now available.`,
         referenceId: savedJob._id,
         read: false,
       }));
@@ -65,18 +75,35 @@ export const createJob = async (req, res) => {
         await Notification.insertMany(notifications);
       }
 
+      // ✅ Send specialized Job Alert to all matched users
       await Promise.all(
-        matchedUsers.map((user) =>
-          sendWorkflowEmail(
-            user.email,
-            user.name,
-            "New Job Opportunity Found",
-            `A new job matching your qualifications titled **"${title}"** from **${company}** is now available. Log in to your Qualification Based Job Finder dashboard to view the details and apply before **${new Date(closeDate).toDateString()}**.`
+        matchedUsers.map((user) => {
+            if (isClosingSoon) {
+               return sendClosingSoonScenarioAlert(user.email, user.name, "Job Application", title, company, closeDate);
+            } else {
+               return sendJobAlert(user.email, user.name, "Created", title, company, openDate, closeDate);
+            }
+        })
+      );
 
+      // ✅ Notify Admins about the new job posting
+      const admins = await Admin.find({});
+      await Promise.all(
+        admins.map((admin) =>
+          sendWorkflowEmail(
+            admin.email,
+            admin.name,
+            "New Job Posting Alert",
+            `A new job has been posted on the platform:\n\n**Title:** ${title}\n**Company:** ${company}\n**Posted By:** ${req.user ? req.user.name : 'System Admin'}\n\nPlease review the posting in the admin panel.`
           )
         )
       );
+    }
 
+    // ✅ Notify the Company that Job was Created
+    const companyAccount = await Company.findOne({ name: company });
+    if (companyAccount) {
+      await sendCompanyActionAlert(companyAccount.email, companyAccount.name, "Job", "Created", title, openDate, closeDate);
     }
 
     res.status(201).json(savedJob);
@@ -131,6 +158,30 @@ export const updateJob = async (req, res) => {
   try {
     const updatedJob = await Job.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!updatedJob) return res.status(404).json({ message: "Job not found" });
+
+    // ✅ Notify matched users about the update
+    const qualificationMatch = updatedJob.qualification && updatedJob.qualification.trim();
+    const categoryMatch = updatedJob.category && updatedJob.category.trim();
+
+    if (qualificationMatch || categoryMatch) {
+      const query = { role: "user", $or: [] };
+      if (qualificationMatch) query.$or.push({ qualification: { $regex: new RegExp(`^${qualificationMatch}$`, "i") } });
+      if (categoryMatch) query.$or.push({ qualificationCategory: { $regex: new RegExp(`^${categoryMatch}$`, "i") } });
+
+      const matchedUsers = await User.find(query);
+      await Promise.all(
+        matchedUsers.map((user) =>
+          sendJobAlert(user.email, user.name, "Updated", updatedJob.title, updatedJob.company, updatedJob.openDate, updatedJob.closeDate)
+        )
+      );
+    }
+
+    // ✅ Notify the Company that Job was Updated
+    const companyAccount = await Company.findOne({ name: updatedJob.company });
+    if (companyAccount) {
+      await sendCompanyActionAlert(companyAccount.email, companyAccount.name, "Job", "Updated", updatedJob.title, updatedJob.openDate, updatedJob.closeDate);
+    }
+
     res.status(200).json(updatedJob);
   } catch (error) {
     res.status(500).json({ message: "Failed to update job", error: error.message });
@@ -142,6 +193,29 @@ export const deleteJob = async (req, res) => {
   try {
     const deletedJob = await Job.findByIdAndDelete(req.params.id);
     if (!deletedJob) return res.status(404).json({ message: "Job not found" });
+
+    // Notify matched users that the job was removed
+    const qualificationMatch = deletedJob.qualification && deletedJob.qualification.trim();
+    const categoryMatch = deletedJob.category && deletedJob.category.trim();
+
+    if (qualificationMatch || categoryMatch) {
+      const query = { role: "user", $or: [] };
+      if (qualificationMatch) query.$or.push({ qualification: { $regex: new RegExp(`^${qualificationMatch}$`, "i") } });
+      if (categoryMatch) query.$or.push({ qualificationCategory: { $regex: new RegExp(`^${categoryMatch}$`, "i") } });
+
+      const matchedUsers = await User.find(query);
+      await Promise.all(
+        matchedUsers.map((user) =>
+          sendJobAlert(user.email, user.name, "Deleted", deletedJob.title, deletedJob.company, deletedJob.openDate, deletedJob.closeDate)
+        )
+      );
+    }
+
+    // ✅ Notify the Company that Job was Deleted
+    const companyAccount = await Company.findOne({ name: deletedJob.company });
+    if (companyAccount) {
+      await sendCompanyActionAlert(companyAccount.email, companyAccount.name, "Job", "Deleted", deletedJob.title, deletedJob.openDate, deletedJob.closeDate);
+    }
 
     // Remove stale notifications related to this deleted job
     await Notification.deleteMany({ type: "job", referenceId: deletedJob._id });

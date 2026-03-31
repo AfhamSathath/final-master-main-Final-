@@ -22,6 +22,7 @@ import VerifyOtp from "./pages/auth/VerifyOtp";
 import ResetPassword from "./pages/auth/ResetPassword";
 import CoursesFront from "./pages/CoursesFront";
 import JobsFront from "./pages/JobsFront";
+import MagicLogin from "./pages/auth/MagicLogin";
 
 // ===== Dashboards =====
 import AdminDashboard from "./pages/AdminDashboard";
@@ -83,7 +84,8 @@ const App: React.FC = () => (
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="/forgot-password" element={<ForgetPassword/>}/>
           <Route path="/verify-otp" element={<VerifyOtp/>}/>
-          <Route path="/reset-password" element={<ResetPassword/>} />
+!          <Route path="/reset-password" element={<ResetPassword/>} />
+          <Route path="/magic-login" element={<MagicLogin />} />
 
           <Route path="/CoursesFront" element={<CoursesFront/>} />
           <Route path="/JobsFront" element={<JobsFront/>} />

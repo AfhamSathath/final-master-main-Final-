@@ -20,6 +20,7 @@ const CourseSchema = new mongoose.Schema(
       default: "paid",
     },
     location: { type: String, default: "" },
+    closeDate: { type: Date },
   },
   { timestamps: true }
 );

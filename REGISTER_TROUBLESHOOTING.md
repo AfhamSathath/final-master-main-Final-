@@ -359,7 +359,7 @@ How to Fix:
 Option A: Check Frontend Running
 1. Open terminal where you ran "npm run dev"
 2. Look for: "Local: http://localhost:8080"
-3. Or check: "5173" port mentioned
+3. Or check: "8080" port mentioned
 4. If not running, do:
    cd clientnew
    npm run dev

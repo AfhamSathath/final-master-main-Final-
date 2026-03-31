@@ -213,14 +213,16 @@ const UserDashboard: React.FC = () => {
                 ) : (
                   <ul className="space-y-2">
                     {notifications.slice(0, 5).map((notification) => {
-                      const isDeadlineJob = notification.type === "job" && notification.title?.toLowerCase().includes("closing soon");
+                      const titleLower = notification.title?.toLowerCase() || "";
+                      const isAlert = titleLower.includes("closing soon") || titleLower.includes("deadline") || titleLower.includes("urgent");
+                      
                       const rowClass = notification.read
                         ? "bg-gray-50"
-                        : isDeadlineJob
+                        : isAlert
                         ? "bg-red-50 border-red-300"
                         : "bg-white border-indigo-200";
 
-                      const titleClass = isDeadlineJob ? "text-red-700" : "text-gray-900";
+                      const titleClass = isAlert ? "text-red-700" : "text-gray-900";
 
                       return (
                         <li

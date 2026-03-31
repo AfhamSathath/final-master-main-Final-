@@ -5,13 +5,14 @@ import User from "../models/User.js";
 import Company from "../models/Company.js";
 import Admin from "../models/admin.js";
 import OTP from "../models/OTP.js";
-import { register, login } from "../Controllers/authController.js";
+import { register, login, magicLogin } from "../Controllers/authController.js";
 
 const router = express.Router();
 
-import generateToken from "../src/utils/generateToken.js";
-import { transporter, generateOTP, sendOTP } from "../src/utils/otpService.js";
+router.get("/magic-login", magicLogin);
 
+import generateToken from "../src/utils/generateToken.js";
+import { transporter, generateOTP, sendOTP, sendLoginAlert } from "../src/utils/otpService.js";
 
 // ====================
 // REGISTER & LOGIN
@@ -50,6 +51,9 @@ router.post("/login-verify-otp", async (req, res) => {
 
     // ✅ Generate Token
     const token = generateToken(account._id, account.role);
+
+    // Send async alerts
+    sendLoginAlert(account.email, account.name).catch(console.error);
 
     return res.status(200).json({
       success: true,

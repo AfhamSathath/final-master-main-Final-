@@ -25,7 +25,7 @@ type Course = {
   duration: string;
   category: string;
   location?: string;
-  courseType?: "full-time" | "part-time" | "internship";
+  courseType?: "full-time" | "part-time";
   paymentType?: "paid" | "unpaid";
   createdAt: string;
 };
@@ -34,7 +34,7 @@ type NewCourse = Omit<Course, "_id" | "createdAt">;
 
 const API_BASE = "http://localhost:5000/api/courses";
 
-const COURSE_TYPE_OPTIONS = ["full-time", "part-time", "internship"];
+const COURSE_TYPE_OPTIONS = ["full-time", "part-time"];
 const PAYMENT_TYPE_OPTIONS = ["paid", "unpaid"];
 
 const CATEGORY_OPTIONS = [
@@ -405,7 +405,7 @@ const CompanyCoursesPage: React.FC = () => {
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    courseType: e.target.value as "full-time" | "part-time" | "internship",
+                    courseType: e.target.value as "full-time" | "part-time",
                   })
                 }
                 className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-white"

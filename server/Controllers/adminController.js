@@ -148,7 +148,7 @@ export const createAdmin = async (req, res) => {
       role: "admin",
     });
 
-    // ✅ Send Admin Creation Email (Branded for Exam System)
+    // ✅ Send Admin Creation Email (Branded for QJC)
     await sendWorkflowEmail(
       newAdmin.email,
       newAdmin.name,
