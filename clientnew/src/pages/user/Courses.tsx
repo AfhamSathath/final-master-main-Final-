@@ -7,6 +7,7 @@ import toast, { Toaster } from "react-hot-toast";
 import Linkify from "react-linkify";
 
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
+import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
 
 interface Course {
   _id: string;
@@ -109,19 +110,14 @@ const CoursePage: React.FC = () => {
       (course.institution?.toLowerCase() ?? "").includes(q) ||
       (course.description?.toLowerCase() ?? "").includes(q);
 
-    const qual = course.qualification?.toLowerCase() || "";
-    const qFilter = qualificationFilter.toLowerCase();
-    const matchQualification =
-      !qFilter ||
-      qual.includes(qFilter) ||
-      (qFilter.includes("dg") && qual.includes("degree")) ||
-      (qFilter.includes("dip") && qual.includes("diploma"));
+    const matchesQualification =
+      !qualificationFilter || (course.qualification || "").toLowerCase() === qualificationFilter.toLowerCase();
 
     const matchCourseType = courseTypeFilter ? course.courseType === courseTypeFilter : true;
     const matchPaymentType = paymentTypeFilter ? course.paymentType === paymentTypeFilter : true;
     const matchLocation = locationFilter ? (course.location || "") === locationFilter : true;
 
-    return matchCategory && matchSearch && matchQualification && matchCourseType && matchPaymentType && matchLocation;
+    return matchCategory && matchSearch && matchesQualification && matchCourseType && matchPaymentType && matchLocation;
   });
 
   // ✅ Category counts
@@ -171,12 +167,16 @@ const CoursePage: React.FC = () => {
           <Search className="absolute left-3 top-2.5 text-blue-500" size={18} />
         </div>
 
-        <Input
-          placeholder="Filter by Qualification (Degree, Diploma, A/L)"
+        <select
           value={qualificationFilter}
           onChange={(e) => setQualificationFilter(e.target.value)}
-          className="w-full md:w-80 border-2 border-green-400 focus:border-green-600"
-        />
+          className="w-full md:w-80 border-2 border-green-400 focus:border-green-600 rounded-lg p-2"
+        >
+          <option value="">All Qualifications</option>
+          {QUALIFICATION_OPTIONS.map((qual) => (
+            <option key={qual} value={qual}>{qual}</option>
+          ))}
+        </select>
 
         <select
           value={locationFilter}

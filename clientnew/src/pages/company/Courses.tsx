@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
+import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
 import {
   Edit,
   Trash2,
@@ -93,6 +94,7 @@ const CompanyCoursesPage: React.FC = () => {
   const [filterLocation, setFilterLocation] = useState("");
   const [filterCourseType, setFilterCourseType] = useState("");
   const [filterPaymentType, setFilterPaymentType] = useState("");
+  const [filterQualification, setFilterQualification] = useState("");
 
   useEffect(() => {
     setFormData((prev) => ({ ...prev, institution: companyName }));
@@ -152,7 +154,8 @@ const CompanyCoursesPage: React.FC = () => {
     const matchesLocation = filterLocation ? c.location === filterLocation : true;
     const matchesCourseType = filterCourseType ? c.courseType === filterCourseType : true;
     const matchesPaymentType = filterPaymentType ? c.paymentType === filterPaymentType : true;
-    return matchesCategory && matchesLocation && matchesCourseType && matchesPaymentType;
+    const matchesQualification = filterQualification ? c.qualification === filterQualification : true;
+    return matchesCategory && matchesLocation && matchesCourseType && matchesPaymentType && matchesQualification;
   });
 
   if (isLoading)
@@ -214,6 +217,16 @@ const CompanyCoursesPage: React.FC = () => {
               <option key={district} value={district}>
                 {district}
               </option>
+            ))}
+          </select>
+          <select
+            value={filterQualification}
+            onChange={(e) => setFilterQualification(e.target.value)}
+            className="border rounded-lg p-3 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="">All Qualifications</option>
+            {QUALIFICATION_OPTIONS.map((qual) => (
+              <option key={qual} value={qual}>{qual}</option>
             ))}
           </select>
         </div>
@@ -377,13 +390,19 @@ const CompanyCoursesPage: React.FC = () => {
                 readOnly
                 className="border rounded-lg p-3 bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
               />
-              <input
-                type="text"
-                placeholder="Qualification"
+              <select
                 value={formData.qualification}
                 onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
                 className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
-              />
+                required
+              >
+                <option value="">Select Qualification</option>
+                {QUALIFICATION_OPTIONS.map((qual) => (
+                  <option key={qual} value={qual}>
+                    {qual}
+                  </option>
+                ))}
+              </select>
               <input
                 type="text"
                 placeholder="Duration"

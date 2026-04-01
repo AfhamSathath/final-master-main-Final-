@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
+import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
 import {
   Edit,
   Trash2,
@@ -95,6 +96,7 @@ const AdminJobsPage: React.FC = () => {
   const [filterLocation, setFilterLocation] = useState("");
   const [filterJobType, setFilterJobType] = useState("");
   const [filterPaymentType, setFilterPaymentType] = useState("");
+  const [filterQualification, setFilterQualification] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState<NewJob>({
     title: "",
@@ -165,6 +167,7 @@ const AdminJobsPage: React.FC = () => {
     const matchesLocation = filterLocation ? job.location === filterLocation : true;
     const matchesJobType = filterJobType ? job.positionType === filterJobType : true;
     const matchesPaymentType = filterPaymentType ? job.paymentType === filterPaymentType : true;
+    const matchesQualification = filterQualification ? job.qualification === filterQualification : true;
     const matchesSearch =
       searchTerm.trim() === "" ||
       job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -174,6 +177,7 @@ const AdminJobsPage: React.FC = () => {
       matchesLocation &&
       matchesJobType &&
       matchesPaymentType &&
+      matchesQualification &&
       matchesSearch
     );
   });
@@ -435,15 +439,21 @@ const AdminJobsPage: React.FC = () => {
                   </option>
                 ))}
               </select>
-              <input
-                type="text"
-                placeholder="Qualification"
+              <select
                 value={formData.qualification}
                 onChange={(e) =>
                   setFormData({ ...formData, qualification: e.target.value })
                 }
                 className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400"
-              />
+                required
+              >
+                <option value="">Select Qualification</option>
+                {QUALIFICATION_OPTIONS.map((qual) => (
+                  <option key={qual} value={qual}>
+                    {qual}
+                  </option>
+                ))}
+              </select>
               <input
                 type="date"
                 placeholder="Open Date"

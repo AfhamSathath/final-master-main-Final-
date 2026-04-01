@@ -1,0 +1,18 @@
+export const QUALIFICATION_OPTIONS = [
+  "G.C.E. A/L",
+  "NVQ Level 3",
+  "NVQ Level 4",
+  "NVQ Level 5 (Diploma)",
+  "NVQ Level 6 (Higher Diploma)",
+  "NVQ Level 7 (Bachelor's Degree)",
+  "Certificate",
+  "Diploma",
+  "Higher Diploma",
+  "HND (Higher National Diploma)",
+  "Bachelor's Degree",
+  "Postgraduate Diploma",
+  "Master's Degree",
+  "PhD / Doctorate",
+  "Professional Qualification (CIM, CIMA, ACCA, etc.)",
+  "Others",
+];

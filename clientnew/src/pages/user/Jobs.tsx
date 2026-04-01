@@ -6,6 +6,7 @@ import { io, Socket } from "socket.io-client";
 import toast, { Toaster } from "react-hot-toast";
 import Linkify from "react-linkify";
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
+import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
 
 interface Company {
   name?: string;
@@ -120,13 +121,8 @@ const JobPage: React.FC = () => {
     const qual = job.qualification?.toLowerCase() || "";
     const qFilter = qualificationFilter.toLowerCase();
 
-    const matchQualification =
-      !qFilter ||
-      qual.includes(qFilter) ||
-      (qFilter.includes("dg") && qual.includes("degree")) ||
-      (qFilter.includes("dip") && qual.includes("diploma")) ||
-      (qFilter.includes("al") && qual.includes("a/l")) ||
-      (qFilter.includes("ol") && qual.includes("o/l"));
+    const matchesQualification =
+      !qualificationFilter || (job.qualification || "").toLowerCase() === qualificationFilter.toLowerCase();
 
     const matchJobType =
       !jobTypeFilter || (job.positionType || "").toLowerCase() === jobTypeFilter.toLowerCase();
@@ -138,7 +134,7 @@ const JobPage: React.FC = () => {
       matchCategory &&
       matchesLocation &&
       matchSearch &&
-      matchQualification &&
+      matchesQualification &&
       matchJobType &&
       matchPaymentType
     );
@@ -188,12 +184,16 @@ const JobPage: React.FC = () => {
           <Search className="absolute left-3 top-2.5 text-blue-500" size={18} />
         </div>
 
-        <Input
-          placeholder="Filter by Qualification (Degree, Diploma, A/L)"
+        <select
           value={qualificationFilter}
           onChange={(e) => setQualificationFilter(e.target.value)}
-          className="w-full md:w-80 border-2 border-green-400 focus:border-green-600"
-        />
+          className="w-full md:w-80 border-2 border-green-400 focus:border-green-600 rounded-lg p-2"
+        >
+          <option value="">All Qualifications</option>
+          {QUALIFICATION_OPTIONS.map((qual) => (
+            <option key={qual} value={qual}>{qual}</option>
+          ))}
+        </select>
 
         <select
           value={locationFilter}

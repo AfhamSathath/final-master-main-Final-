@@ -6,6 +6,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { Edit, Trash2, PlusCircle, X, Building2, Calendar, GraduationCap } from "lucide-react";
 import { getUser } from "@/utils/Auth";
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
+import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
 
 // ================== HELPER FUNCTION ==================
 const LinkifyText = ({ text }: { text: string }) => {
@@ -115,6 +116,7 @@ const CompanyJobsPage: React.FC = () => {
   const [filterPositionType, setFilterPositionType] = useState("");
   const [filterPaymentType, setFilterPaymentType] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
+  const [filterQualification, setFilterQualification] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -175,6 +177,7 @@ const CompanyJobsPage: React.FC = () => {
     const matchesPosition = filterPositionType ? j.positionType === filterPositionType : true;
     const matchesPayment = filterPaymentType ? j.paymentType === filterPaymentType : true;
     const matchesLocation = filterLocation ? j.location === filterLocation : true;
+    const matchesQualification = filterQualification ? j.qualification === filterQualification : true;
     const term = searchTerm.trim().toLowerCase();
     const matchesSearch =
       term === "" ||
@@ -182,7 +185,7 @@ const CompanyJobsPage: React.FC = () => {
       j.description.toLowerCase().includes(term) ||
       j.company.toLowerCase().includes(term) ||
       (j.location?.toLowerCase().includes(term));
-    return matchesCategory && matchesPosition && matchesPayment && matchesLocation && matchesSearch;
+    return matchesCategory && matchesPosition && matchesPayment && matchesLocation && matchesQualification && matchesSearch;
   });
 
   if (isLoading) return <p className="text-center mt-10 text-gray-600">Loading jobs...</p>;
@@ -243,6 +246,16 @@ const CompanyJobsPage: React.FC = () => {
             <option value="">All Districts</option>
             {SRI_LANKA_DISTRICTS.map((district) => (
               <option key={district} value={district}>{district}</option>
+            ))}
+          </select>
+          <select
+            value={filterQualification}
+            onChange={(e) => setFilterQualification(e.target.value)}
+            className="border rounded-lg p-3 bg-white shadow-sm focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="">All Qualifications</option>
+            {QUALIFICATION_OPTIONS.map((qual) => (
+              <option key={qual} value={qual}>{qual}</option>
             ))}
           </select>
         </div>
@@ -405,13 +418,19 @@ const CompanyJobsPage: React.FC = () => {
                 readOnly
                 className="border rounded-lg p-3 bg-gray-100 text-gray-500"
               />
-              <input
-                type="text"
-                placeholder="Qualification"
+              <select
                 value={formData.qualification}
                 onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
                 className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400"
-              />
+                required
+              >
+                <option value="">Select Qualification</option>
+                {QUALIFICATION_OPTIONS.map((qual) => (
+                  <option key={qual} value={qual}>
+                    {qual}
+                  </option>
+                ))}
+              </select>
               <input
                 type="date"
                 placeholder="Open Date"

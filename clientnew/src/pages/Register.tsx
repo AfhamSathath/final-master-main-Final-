@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
+import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
 
 // ------------------- API BASE -------------------
 const API_BASE = "http://localhost:5000";
@@ -41,6 +42,18 @@ const registerValidationSchema = z
     },
     {
       message: "Qualification is required for users",
+      path: ["qualification"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.userType === "user") {
+        return !!data.qualification && QUALIFICATION_OPTIONS.includes(data.qualification);
+      }
+      return true;
+    },
+    {
+      message: "Please select a valid qualification",
       path: ["qualification"],
     }
   )
@@ -483,17 +496,22 @@ const Register: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-semibold mb-1 text-gray-700">
-                      Qualification (e.g., IT Diploma, A/L, O/L)
+                      Qualification
                     </label>
-                    <input
-                      type="text"
+                    <select
                       name="qualification"
                       value={formData.qualification || ""}
                       onChange={handleChange}
                       required
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-400"
-                      placeholder="Enter your qualification"
-                    />
+                    >
+                      <option value="">Select your qualification</option>
+                      {QUALIFICATION_OPTIONS.map((qual) => (
+                        <option key={qual} value={qual}>
+                          {qual}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </>
               )}
