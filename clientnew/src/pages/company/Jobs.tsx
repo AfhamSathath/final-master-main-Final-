@@ -13,7 +13,7 @@ const LinkifyText = ({ text }: { text: string }) => {
   const parts = text.split(urlRegex);
   
   return (
-    <>
+    <span>
       {parts.map((part, index) => {
         if (urlRegex.test(part)) {
           return (
@@ -30,7 +30,7 @@ const LinkifyText = ({ text }: { text: string }) => {
         }
         return <span key={index}>{part}</span>;
       })}
-    </>
+    </span>
   );
 };
 

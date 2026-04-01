@@ -375,7 +375,7 @@ export async function sendDeadlineAlertEmail(toEmail, recipientName, summary) {
             <div style="padding: 30px; background: white;">
               <p style="font-size: 16px; color: #333; margin-top: 0;">Hello <strong>${recipientName}</strong>,</p>
               <p style="font-size: 15px; color: #555; line-height: 1.6;">
-                This is a critical update regarding your active career opportunities. Several items matching your qualifications are <strong>expiring within the next 72 hours</strong>.
+                This is a critical update regarding your active career opportunities. Several items matching your qualifications are <strong>expiring within the next 5 days (120 hours)</strong>.
               </p>
               <div style="background: #fff5f5; border-left: 4px solid #dc3545; padding: 20px; margin: 25px 0;">
                 <div style="font-size: 14px; color: #444; line-height: 1.7;">
@@ -410,14 +410,14 @@ export async function sendDeadlineAlertEmail(toEmail, recipientName, summary) {
  * Send specialized "Closing Soon" Scenario Alert News.
  * Uses a real-world high-urgency scenario template for QJC.
  */
-export async function sendClosingSoonScenarioAlert(toEmail, recipientName, entityType, entityName, providerName, closeDate) {
+export async function sendClosingSoonScenarioAlert(toEmail, recipientName, entityType, entityName, providerName, closeDate, isUpdate = false) {
   try {
     const cDate = closeDate ? new Date(closeDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : "Not Specified";
     
     const mailOptions = {
       from: process.env.SMTP_FROM || "dddummy296@gmail.com",
       to: toEmail,
-      subject: `🕒 URGENT: ${entityType} Closing Soon - ${entityName}`,
+      subject: `🕒 URGENT: ${isUpdate ? 'Details Updated & ' : ''}${entityType} Closing Soon - ${entityName}`,
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ff4d4d; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
           <div style="background: linear-gradient(135deg, #ff4d4d 0%, #b30000 100%); padding: 30px 20px; text-align: center; color: white;">
@@ -428,7 +428,9 @@ export async function sendClosingSoonScenarioAlert(toEmail, recipientName, entit
           <div style="padding: 35px 30px; background: white;">
             <p style="font-size: 16px; color: #333; margin-top: 0;">Dear <strong>${recipientName}</strong>,</p>
             <p style="font-size: 15px; color: #555; line-height: 1.6;">
-              Our real-world matching system has identified a <strong>critical deadline</strong> for an opportunity matching your profile. Don't let this chance slip away!
+              ${isUpdate 
+                ? `Some details for an opportunity matching your profile have been <strong>updated</strong>, and the <strong>critical deadline</strong> is approaching. Review the changes now and secure your spot!` 
+                : `Our real-world matching system has identified a <strong>critical deadline</strong> for an opportunity matching your profile. Don't let this chance slip away!`}
             </p>
             <div style="background: #fff8f8; border-left: 4px solid #ff4d4d; padding: 20px; margin: 25px 0; border-radius: 4px;">
               <h3 style="margin: 0; color: #b30000; font-size: 18px;">${entityName}</h3>

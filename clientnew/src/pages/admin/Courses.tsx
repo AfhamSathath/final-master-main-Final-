@@ -332,6 +332,7 @@ const AdminCoursesPage: React.FC = () => {
 
               <div className="text-gray-700 dark:text-gray-300 text-sm mb-4 border-t border-gray-200 dark:border-gray-700 pt-2 break-words">
                 <Linkify
+                  tagName="div"
                   options={{
                     target: "_blank",
                     rel: "noopener noreferrer",

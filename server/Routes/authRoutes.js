@@ -5,11 +5,12 @@ import User from "../models/User.js";
 import Company from "../models/Company.js";
 import Admin from "../models/admin.js";
 import OTP from "../models/OTP.js";
-import { register, login, magicLogin } from "../Controllers/authController.js";
+import { register, login, magicLogin, requestMagicLink } from "../Controllers/authController.js";
 
 const router = express.Router();
 
 router.get("/magic-login", magicLogin);
+router.post("/request-magic-link", requestMagicLink);
 
 import generateToken from "../src/utils/generateToken.js";
 import { transporter, generateOTP, sendOTP, sendLoginAlert } from "../src/utils/otpService.js";

@@ -6,6 +6,7 @@ import { Users, BookOpen, Briefcase, LogOut, Mail, Calendar } from "lucide-react
 import { io, Socket } from "socket.io-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
 
 const roleColors: Record<string, string> = {
   admin: "bg-red-100 text-red-600",
@@ -76,6 +77,32 @@ const UserDashboard: React.FC = () => {
     newSocket.on("userStatsUpdate", (updatedStats: Stats) => {
       setStats(updatedStats);
       setLoading(false);
+    });
+
+    const userId = normalizedUser._id || normalizedUser.id;
+    if (userId) {
+      newSocket.emit("join", userId);
+    }
+
+    newSocket.on("newNotification", (notification: any) => {
+      console.log("🔔 New Notification received:", notification);
+      setNotifications((prev) => [notification, ...prev]);
+      setUnreadCount((prev) => prev + 1);
+
+      // ✅ Visual Toast
+      toast(notification.title, {
+        description: notification.message,
+        duration: 5000,
+      });
+
+      // ✅ Play Notification Sound
+      try {
+        const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+        audio.volume = 0.5;
+        audio.play().catch(err => console.log("Audio play deferred until interaction", err));
+      } catch (err) {
+        console.error("Failed to play sound:", err);
+      }
     });
 
 

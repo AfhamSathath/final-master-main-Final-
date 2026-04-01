@@ -307,21 +307,23 @@ const JobPage: React.FC = () => {
 
                 <div className="bg-purple-50 border-l-4 border-purple-400 p-3 rounded-md text-sm text-gray-700">
                   <strong className="text-purple-700">Description:</strong>{" "}
-                  <Linkify
-                    componentDecorator={(href, text, key) => (
-                      <a
-                        href={href}
-                        key={key}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-700 underline hover:text-blue-900"
-                      >
-                        {text}
-                      </a>
-                    )}
-                  >
-                    {job.description || "No description available."}
-                  </Linkify>
+                  <span>
+                    <Linkify
+                      componentDecorator={(href, text, key) => (
+                        <a
+                          href={href}
+                          key={key}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-700 underline hover:text-blue-900"
+                        >
+                          {text}
+                        </a>
+                      )}
+                    >
+                      {job.description || "No description available."}
+                    </Linkify>
+                  </span>
                 </div>
               </CardContent>
             </Card>

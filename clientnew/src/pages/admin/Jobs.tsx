@@ -341,6 +341,7 @@ const AdminJobsPage: React.FC = () => {
 
               <p className="text-gray-700 text-sm mb-4 border-t pt-2">
                 <Linkify
+                  tagName="span"
                   options={{
                     target: "_blank",
                     rel: "noopener noreferrer",

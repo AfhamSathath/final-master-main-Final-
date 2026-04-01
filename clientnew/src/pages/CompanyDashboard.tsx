@@ -1,12 +1,47 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { getUser, logout } from "@/utils/Auth";
+import { getUser, logout, getToken } from "@/utils/Auth";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { io, Socket } from "socket.io-client";
+import { toast } from "sonner";
 
 const CompanyDashboard: React.FC = () => {
   const navigate = useNavigate();
   const user = getUser();
   const [isOpen, setIsOpen] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    const userId = user._id || user.id;
+    if (!userId) return;
+
+    const socket: Socket = io("http://localhost:5000", {
+       auth: { token: getToken() }
+    });
+
+    socket.emit("join", userId);
+
+    socket.on("newNotification", (notification: any) => {
+       console.log("🔔 New Notification:", notification.title);
+       
+       // ✅ Visual Toast
+       toast(notification.title, {
+          description: notification.message,
+          duration: 5000,
+       });
+
+       try {
+         const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+         audio.volume = 0.5;
+         audio.play().catch(e => console.log("Sound play deferred", e));
+       } catch (e) {
+         console.error("Audio failed", e);
+       }
+    });
+
+    return () => { socket.disconnect(); };
+  }, [user]);
+
 
   const handleLogout = () => {
     logout();

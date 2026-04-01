@@ -3,6 +3,7 @@ import Course from "../../models/Course.js";
 import User from "../../models/User.js";
 import Notification from "../../models/Notification.js";
 import { sendWorkflowEmail, sendDeadlineAlertEmail, sendAlertEmail } from "./otpService.js";
+import { emitNotification } from "./socketManager.js";
 /**
  * Service to calculate and send deadline alerts for a particular user.
  * Aligned with QJC brand.
@@ -11,7 +12,7 @@ import { sendWorkflowEmail, sendDeadlineAlertEmail, sendAlertEmail } from "./otp
  * @param {number} daysWindow - Lookahead window in days (default 3).
  * @returns {Promise<Object|null>} - Returns count of items found, or null if nothing sent.
  */
-export const checkAndSendDeadlineAlert = async (user, daysWindow = 3) => {
+export const checkAndSendDeadlineAlert = async (user, daysWindow = 5) => {
     try {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -89,13 +90,16 @@ export const checkAndSendDeadlineAlert = async (user, daysWindow = 3) => {
         );
 
         // Record persistent in-app notification
-        await Notification.create({
+        const newNotif = await Notification.create({
             userId: user._id,
             type: jobs.length > 0 ? "job" : "course",
             title: "⏰ Upcoming Deadlines Alert",
             message: `You have ${jobs.length + courses.length} matching opportunities closing within the next ${daysWindow} days. Check your email for details.`,
             read: false
         });
+
+        // ✅ Real-time Socket Broadcast for Audio Alerts
+        emitNotification(user._id, newNotif);
 
         return { jobs: jobs.length, courses: courses.length };
     } catch (error) {

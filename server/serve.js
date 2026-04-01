@@ -9,9 +9,8 @@ import { Server } from "socket.io";
 import connectDB from "./db.js";
 import User from "./models/User.js";
 import startNotificationScheduler from "./src/utils/notificationScheduler.js";
-
-
-
+import { initSocketManager } from "./src/utils/socketManager.js";
+import notificationRoutes from "./Routes/notificationRoutes.js";
 
 // Routes
 import userRoutes from "./Routes/userRoutes.js";
@@ -42,9 +41,19 @@ export const io = new Server(server, {
   },
 });
 
+// ✅ Initialize the Socket Manager for Notification Broadcasting
+initSocketManager(io);
+
 // Log socket connections
 io.on("connection", (socket) => {
   console.log("🟢 Client connected:", socket.id);
+
+  // ✅ Join a room (used for magic link real-time notification)
+  socket.on("join", (room) => {
+    console.log(`📡 Client ${socket.id} joining room: ${room}`);
+    socket.join(room);
+  });
+
   socket.on("disconnect", () => console.log("🔴 Client disconnected:", socket.id));
 });
 
@@ -77,7 +86,7 @@ app.use("/api/courses", courseRoutes);
 app.use("/api/companies", companyRoutes);
 app.use("/api/admins", adminRoutes);
 
-app.use("/api/notifications", (await import("./Routes/notificationRoutes.js")).default);
+app.use("/api/notifications", notificationRoutes);
 
 app.use("/api/verify-company", verifyCompanyRoute);
 app.use("/api/check-duplicate", duplicateCheckRouter);

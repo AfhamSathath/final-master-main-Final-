@@ -214,6 +214,50 @@ export const magicLogin = async (req, res) => {
   }
 };
 
+// ================= REQUEST MAGIC LINK =================
+export const requestMagicLink = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required." });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const account =
+      (await User.findOne({ email: normalizedEmail })) ||
+      (await Company.findOne({ email: normalizedEmail })) ||
+      (await Admin.findOne({ email: normalizedEmail }));
+
+    if (!account) {
+      return res.status(404).json({ success: false, message: "Account not found." });
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    account.magicToken = token;
+    account.magicTokenExpiry = Date.now() + 15 * 60 * 1000; // 15 mins
+    await account.save();
+
+    const frontendUrl = process.env.CLIENT_URL || "http://localhost:8080";
+    const magicLink = `${frontendUrl}/magic-login?token=${token}&email=${account.email}`;
+
+    const mailRes = await sendMagicLink(account.email, account.name, magicLink);
+    if (!mailRes.success) {
+      return res.status(500).json({ success: false, message: "Failed to send login link." });
+    }
+
+    return res.json({
+      success: true,
+      message: "A secure 'It's Me' login link has been sent to your email.",
+      type: "magic-link"
+    });
+  } catch (error) {
+    console.error("Request magic link error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 // ================= FORGOT PASSWORD =================
 export const forgotPassword = async (req, res) => {
   try {

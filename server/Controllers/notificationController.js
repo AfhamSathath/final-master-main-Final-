@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import Job from "../models/Job.js";
 import Course from "../models/Course.js";
 import { sendAlertEmail } from "../src/utils/otpService.js";
+import { emitNotification } from "../src/utils/socketManager.js";
 
 const getUserId = (req) => req.user?.id || req.query.userId || req.params.userId;
 
@@ -60,7 +61,7 @@ export const syncNearDeadlineAndRecentAlerts = async (req, res) => {
     if (user.role !== "user") return res.status(403).json({ message: "Only user roles are synced" });
 
     const now = new Date();
-    const in3Days = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const in5Days = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
 
     // Automatically remove notifications for jobs/courses that are closed.
     const expiredJobs = await Job.find({ closeDate: { $lt: now } }).select("_id");
@@ -79,8 +80,8 @@ export const syncNearDeadlineAndRecentAlerts = async (req, res) => {
       await Notification.deleteMany({ userId, type: "course", referenceId: { $in: expiredCourseIds } });
     }
 
-    const deadlineJobs = await Job.find({ closeDate: { $gte: now, $lte: in3Days } });
-    const deadlineCourses = await Course.find({ closeDate: { $gte: now, $lte: in3Days } });
+    const deadlineJobs = await Job.find({ closeDate: { $gte: now, $lte: in5Days } });
+    const deadlineCourses = await Course.find({ closeDate: { $gte: now, $lte: in5Days } });
 
     const alertPromises = [];
 
@@ -127,7 +128,11 @@ export const syncNearDeadlineAndRecentAlerts = async (req, res) => {
       }
     }
 
-    await Promise.all(alertPromises);
+    const createdNotifications = await Promise.all(alertPromises);
+    // ✅ Broadcast real-time Socket notifications for Audio alerts
+    createdNotifications.forEach(n => {
+      if (n) emitNotification(userId, n);
+    });
 
     const notifications = await Notification.find({ userId }).sort({ createdAt: -1 });
     return res.status(200).json({ notifications });

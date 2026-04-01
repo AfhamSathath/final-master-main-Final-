@@ -7,6 +7,7 @@ import nodemailer from "nodemailer";
 import Company from "../models/Company.js";
 
 import { sendWorkflowEmail, sendJobAlert, sendCompanyActionAlert, sendAlertEmail, sendClosingSoonScenarioAlert } from "../src/utils/otpService.js";
+import { emitNotification } from "../src/utils/socketManager.js";
 
 
 // ================== CREATE JOB ==================
@@ -54,10 +55,10 @@ export const createJob = async (req, res) => {
 
       const matchedUsers = await User.find(query);
 
-      const in3Days = new Date();
-      in3Days.setDate(in3Days.getDate() + 3);
+      const in5Days = new Date();
+      in5Days.setDate(in5Days.getDate() + 5);
       const jobCloseDate = closeDate ? new Date(closeDate) : null;
-      const isClosingSoon = jobCloseDate && jobCloseDate <= in3Days;
+      const isClosingSoon = jobCloseDate && jobCloseDate <= in5Days;
 
       // Create In-App Notifications
       const notifications = matchedUsers.map((user) => ({
@@ -72,7 +73,9 @@ export const createJob = async (req, res) => {
       }));
 
       if (notifications.length > 0) {
-        await Notification.insertMany(notifications);
+        const savedNotifications = await Notification.insertMany(notifications);
+        // ✅ Real-time Socket Broadcast for Audio Alerts & Updates
+        savedNotifications.forEach(n => emitNotification(n.userId, n));
       }
 
       // ✅ Send specialized Job Alert to all matched users
@@ -169,10 +172,20 @@ export const updateJob = async (req, res) => {
       if (categoryMatch) query.$or.push({ qualificationCategory: { $regex: new RegExp(`^${categoryMatch}$`, "i") } });
 
       const matchedUsers = await User.find(query);
+
+      const in5Days = new Date();
+      in5Days.setDate(in5Days.getDate() + 5);
+      const jobCloseDate = updatedJob.closeDate ? new Date(updatedJob.closeDate) : null;
+      const isClosingSoon = jobCloseDate && jobCloseDate <= in5Days;
+
       await Promise.all(
-        matchedUsers.map((user) =>
-          sendJobAlert(user.email, user.name, "Updated", updatedJob.title, updatedJob.company, updatedJob.openDate, updatedJob.closeDate)
-        )
+        matchedUsers.map((user) => {
+          if (isClosingSoon) {
+            return sendClosingSoonScenarioAlert(user.email, user.name, "Job Application", updatedJob.title, updatedJob.company, updatedJob.closeDate, true);
+          } else {
+            return sendJobAlert(user.email, user.name, "Updated", updatedJob.title, updatedJob.company, updatedJob.openDate, updatedJob.closeDate);
+          }
+        })
       );
     }
 
