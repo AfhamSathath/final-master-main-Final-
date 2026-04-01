@@ -33,8 +33,8 @@ export async function sendOTP(toEmail, manualOtp = null) {
 
     // ✅ Real-time Socket Broadcast for Login Audio
     if (io) {
-        console.log(`📡 [OTP Service] Emitting otp-sent to: ${toEmail}`);
-        io.to(toEmail).emit("otp-sent", { email: toEmail });
+      console.log(`📡 [OTP Service] Emitting otp-sent to: ${toEmail}`);
+      io.to(toEmail).emit("otp-sent", { email: toEmail });
     }
 
     const mailOptions = {
@@ -88,6 +88,7 @@ export async function sendWorkflowEmail(toEmail, recipientName, subject, message
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 0; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden;">
           <div style="background: #007bff; padding: 25px 20px; text-align: center; color: white;">
             <div style="background: white; color: #007bff; width: 50px; height: 50px; border-radius: 50%; line-height: 50px; font-size: 24px; margin: 0 auto 10px; font-weight: 800;">QJC</div>
+            <img src="public/image.png" alt="QJC Logo" style="width: 100px; height: auto; margin: 0 auto 15px; display: block;">
             <h2 style="margin: 0; font-size: 20px; font-weight: 600; letter-spacing: 0.5px;">Qualification Job Finder</h2>
           </div>
           <div style="padding: 30px; background: white;">
@@ -308,14 +309,14 @@ export async function sendCompanyActionAlert(toEmail, companyName, entityType, a
   const formatDate = (date) => date ? new Date(date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : "Not Specified";
 
   let message = `Your ${entityType.toLowerCase()} listing for **${entityName}** has ${verbPhrase} in the Qualification Based Job Finder System.<br><br>`;
-  
+
   if (action !== "Deleted") {
-      if (openDate) { message += `**Opening Date:** ${formatDate(openDate)}<br>`; }
-      if (closeDate) { message += `**Closing Date:** ${formatDate(closeDate)}<br><br>`; }
+    if (openDate) { message += `**Opening Date:** ${formatDate(openDate)}<br>`; }
+    if (closeDate) { message += `**Closing Date:** ${formatDate(closeDate)}<br><br>`; }
   } else {
-      message += `<br>`;
+    message += `<br>`;
   }
-  
+
   message += `You can access your dashboard to review changes.`;
 
   return await sendWorkflowEmail(toEmail, companyName, `${entityType} ${action} - Qualification Job Finder`, message);
@@ -358,10 +359,10 @@ export async function sendLoginAlert(toEmail, recipientName) {
 export async function sendDeadlineAlertEmail(toEmail, recipientName, summary) {
   try {
     const mailOptions = {
-        from: process.env.SMTP_FROM || "dddummy296@gmail.com",
-        to: toEmail,
-        subject: `🚨 Action Required: Deadlines Approaching!`,
-        html: `
+      from: process.env.SMTP_FROM || "dddummy296@gmail.com",
+      to: toEmail,
+      subject: `🚨 Action Required: Deadlines Approaching!`,
+      html: `
           <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #dc3545; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(220, 53, 69, 0.1);">
             <div style="background: #dc3545; padding: 25px 20px; text-align: center; color: white;">
               <div style="font-size: 40px; margin-bottom: 5px;">⚠️</div>
@@ -397,20 +398,20 @@ export async function sendDeadlineAlertEmail(toEmail, recipientName, summary) {
 
     // ✅ Real-time Socket Broadcast for Audio Alerts (Deadline News)
     try {
-        const user = await User.findOne({ email: toEmail });
-        if (user && io) {
-            io.to(user._id.toString()).emit("newNotification", {
-                _id: "deadline-" + new Date().getTime(),
-                userId: user._id,
-                type: "news",
-                title: "⚠️ ACTION REQUIRED: Upcoming Deadlines",
-                message: "Several opportunities matching your profile close within 5 days. Secure your spot now!",
-                createdAt: new Date().toISOString(),
-                read: false
-            });
-        }
+      const user = await User.findOne({ email: toEmail });
+      if (user && io) {
+        io.to(user._id.toString()).emit("newNotification", {
+          _id: "deadline-" + new Date().getTime(),
+          userId: user._id,
+          type: "news",
+          title: "⚠️ ACTION REQUIRED: Upcoming Deadlines",
+          message: "Several opportunities matching your profile close within 5 days. Secure your spot now!",
+          createdAt: new Date().toISOString(),
+          read: false
+        });
+      }
     } catch (e) {
-        console.error("Deadline Socket Alert Failed", e);
+      console.error("Deadline Socket Alert Failed", e);
     }
 
     return { success: true, messageId: info.messageId };
@@ -427,7 +428,7 @@ export async function sendDeadlineAlertEmail(toEmail, recipientName, summary) {
 export async function sendClosingSoonScenarioAlert(toEmail, recipientName, entityType, entityName, providerName, closeDate, isUpdate = false) {
   try {
     const cDate = closeDate ? new Date(closeDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : "Not Specified";
-    
+
     const mailOptions = {
       from: process.env.SMTP_FROM || "dddummy296@gmail.com",
       to: toEmail,
@@ -442,9 +443,9 @@ export async function sendClosingSoonScenarioAlert(toEmail, recipientName, entit
           <div style="padding: 35px 30px; background: white;">
             <p style="font-size: 16px; color: #333; margin-top: 0;">Dear <strong>${recipientName}</strong>,</p>
             <p style="font-size: 15px; color: #555; line-height: 1.6;">
-              ${isUpdate 
-                ? `Some details for an opportunity matching your profile have been <strong>updated</strong>, and the <strong>critical deadline</strong> is approaching. Review the changes now and secure your spot!` 
-                : `Our real-world matching system has identified a <strong>critical deadline</strong> for an opportunity matching your profile. Don't let this chance slip away!`}
+              ${isUpdate
+          ? `Some details for an opportunity matching your profile have been <strong>updated</strong>, and the <strong>critical deadline</strong> is approaching. Review the changes now and secure your spot!`
+          : `Our real-world matching system has identified a <strong>critical deadline</strong> for an opportunity matching your profile. Don't let this chance slip away!`}
             </p>
             <div style="background: #fff8f8; border-left: 4px solid #ff4d4d; padding: 20px; margin: 25px 0; border-radius: 4px;">
               <h3 style="margin: 0; color: #b30000; font-size: 18px;">${entityName}</h3>
@@ -474,20 +475,20 @@ export async function sendClosingSoonScenarioAlert(toEmail, recipientName, entit
 
     // ✅ Real-time Socket Broadcast for Audio Alerts (Scenario Logic)
     try {
-        const user = await User.findOne({ email: toEmail });
-        if (user && io) {
-            io.to(user._id.toString()).emit("newNotification", {
-                _id: "scenario-" + new Date().getTime(),
-                userId: user._id,
-                type: entityType.toLowerCase().includes("job") ? "job" : "course",
-                title: `🚨 URGENT: ${entityType} Closing Soon!`,
-                message: `The ${entityType} "${entityName}" closes on ${cDate}. Details updated.`,
-                createdAt: new Date().toISOString(),
-                read: false
-            });
-        }
+      const user = await User.findOne({ email: toEmail });
+      if (user && io) {
+        io.to(user._id.toString()).emit("newNotification", {
+          _id: "scenario-" + new Date().getTime(),
+          userId: user._id,
+          type: entityType.toLowerCase().includes("job") ? "job" : "course",
+          title: `🚨 URGENT: ${entityType} Closing Soon!`,
+          message: `The ${entityType} "${entityName}" closes on ${cDate}. Details updated.`,
+          createdAt: new Date().toISOString(),
+          read: false
+        });
+      }
     } catch (e) {
-        console.error("Scenario Socket Alert Failed", e);
+      console.error("Scenario Socket Alert Failed", e);
     }
 
     return { success: true, messageId: info.messageId };

@@ -45,12 +45,15 @@ export const createCourse = async (req, res) => {
 
     const savedCourse = await newCourse.save();
 
-    const qualificationMatch = qualification && qualification.trim();
+    const qualificationMatch = Array.isArray(qualification) ? qualification : (qualification ? [qualification] : []);
     const categoryMatch = category && category.trim();
 
-    if (qualificationMatch || categoryMatch) {
+    if (qualificationMatch.length > 0 || categoryMatch) {
       const query = { role: "user", $or: [] };
-      if (qualificationMatch) query.$or.push({ qualification: { $regex: new RegExp(`^${qualificationMatch}$`, "i") } });
+      if (qualificationMatch.length > 0) {
+        const regexArray = qualificationMatch.map(q => new RegExp(`^${q.trim()}$`, "i"));
+        query.$or.push({ qualification: { $in: regexArray } });
+      }
       if (categoryMatch) query.$or.push({ qualificationCategory: { $regex: new RegExp(`^${categoryMatch}$`, "i") } });
 
       const matchedUsers = await User.find(query);
@@ -66,7 +69,7 @@ export const createCourse = async (req, res) => {
         title: isClosingSoon ? `Course closing soon: ${name}` : `🎓 New Course Alert: ${name}`,
         message: isClosingSoon 
           ? `Deadline approaching for ${name} at ${institution}. Closes on ${courseCloseDate.toDateString()}.`
-          : `New ${qualificationMatch} course available at ${institution}: ${name}. Enrollment closes on ${courseCloseDate ? courseCloseDate.toLocaleDateString() : 'N/A'}.`,
+          : `New ${qualificationMatch.join(', ')} course available at ${institution}: ${name}. Enrollment closes on ${courseCloseDate ? courseCloseDate.toLocaleDateString() : 'N/A'}.`,
         referenceId: savedCourse._id,
         read: false,
       }));
@@ -174,12 +177,15 @@ export const updateCourse = async (req, res) => {
     }
 
     // Notify matched users about the update
-    const qualificationMatch = updatedCourse.qualification && updatedCourse.qualification.trim();
+    const qualificationMatch = Array.isArray(updatedCourse.qualification) ? updatedCourse.qualification : (updatedCourse.qualification ? [updatedCourse.qualification] : []);
     const categoryMatch = updatedCourse.category && updatedCourse.category.trim();
 
-    if (qualificationMatch || categoryMatch) {
+    if (qualificationMatch.length > 0 || categoryMatch) {
       const query = { role: "user", $or: [] };
-      if (qualificationMatch) query.$or.push({ qualification: { $regex: new RegExp(`^${qualificationMatch}$`, "i") } });
+      if (qualificationMatch.length > 0) {
+        const regexArray = qualificationMatch.map(q => new RegExp(`^${q.trim()}$`, "i"));
+        query.$or.push({ qualification: { $in: regexArray } });
+      }
       if (categoryMatch) query.$or.push({ qualificationCategory: { $regex: new RegExp(`^${categoryMatch}$`, "i") } });
 
       const matchedUsers = await User.find(query);
@@ -242,12 +248,15 @@ export const deleteCourse = async (req, res) => {
     }
 
     // Notify matched users that the course was removed
-    const qualificationMatch = deletedCourse.qualification && deletedCourse.qualification.trim();
+    const qualificationMatch = Array.isArray(deletedCourse.qualification) ? deletedCourse.qualification : (deletedCourse.qualification ? [deletedCourse.qualification] : []);
     const categoryMatch = deletedCourse.category && deletedCourse.category.trim();
 
-    if (qualificationMatch || categoryMatch) {
+    if (qualificationMatch.length > 0 || categoryMatch) {
       const query = { role: "user", $or: [] };
-      if (qualificationMatch) query.$or.push({ qualification: { $regex: new RegExp(`^${qualificationMatch}$`, "i") } });
+      if (qualificationMatch.length > 0) {
+        const regexArray = qualificationMatch.map(q => new RegExp(`^${q.trim()}$`, "i"));
+        query.$or.push({ qualification: { $in: regexArray } });
+      }
       if (categoryMatch) query.$or.push({ qualificationCategory: { $regex: new RegExp(`^${categoryMatch}$`, "i") } });
 
       const matchedUsers = await User.find(query);

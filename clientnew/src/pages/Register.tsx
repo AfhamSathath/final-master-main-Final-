@@ -5,6 +5,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
+import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 
 // ------------------- API BASE -------------------
 const API_BASE = "http://localhost:5000";
@@ -26,7 +27,7 @@ const registerValidationSchema = z
     regNumber: z.string().optional(),
     address: z.string().optional(),
     qualificationCategory: z.string().optional(),
-    qualification: z.string().optional(),
+    qualification: z.array(z.string()).optional(),
     userType: z.enum(["user", "company"]),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -36,7 +37,7 @@ const registerValidationSchema = z
   .refine(
     (data) => {
       if (data.userType === "user") {
-        return !!data.qualification && data.qualification.length >= 2;
+        return !!data.qualification && data.qualification.length > 0;
       }
       return true;
     },
@@ -48,7 +49,7 @@ const registerValidationSchema = z
   .refine(
     (data) => {
       if (data.userType === "user") {
-        return !!data.qualification && QUALIFICATION_OPTIONS.includes(data.qualification);
+        return !!data.qualification && data.qualification.every(q => QUALIFICATION_OPTIONS.includes(q));
       }
       return true;
     },
@@ -81,7 +82,7 @@ interface RegisterData {
   address?: string;
 
   qualificationCategory?: "" | "Information Technology" | "Business & Management" | "Engineering" | "Digital Marketing" | "Healthcare";
-  qualification?: string;
+  qualification?: string[];
 
   userType: "user" | "company";
 }
@@ -98,7 +99,7 @@ const Register: React.FC = () => {
     regNumber: "",
     address: "",
    qualificationCategory: "",
-    qualification: "",
+    qualification: [],
 
     userType: "user",
   });
@@ -496,22 +497,14 @@ const Register: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-semibold mb-1 text-gray-700">
-                      Qualification
+                      Qualification(s)
                     </label>
-                    <select
-                      name="qualification"
-                      value={formData.qualification || ""}
-                      onChange={handleChange}
-                      required
-                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-400"
-                    >
-                      <option value="">Select your qualification</option>
-                      {QUALIFICATION_OPTIONS.map((qual) => (
-                        <option key={qual} value={qual}>
-                          {qual}
-                        </option>
-                      ))}
-                    </select>
+                    <MultiSelectDropdown
+                      options={QUALIFICATION_OPTIONS}
+                      selectedValues={formData.qualification || []}
+                      onChange={(selected: string[]) => setFormData({ ...formData, qualification: selected })}
+                      placeholder="Select your qualification(s)"
+                    />
                   </div>
                 </>
               )}

@@ -7,6 +7,7 @@ import { Edit, Trash2, PlusCircle, X, Building2, Calendar, GraduationCap } from 
 import { getUser } from "@/utils/Auth";
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
 import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
+import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 
 // ================== HELPER FUNCTION ==================
 const LinkifyText = ({ text }: { text: string }) => {
@@ -41,7 +42,7 @@ export type Job = {
   title: string;
   description: string;
   company: string;
-  qualification?: string;
+  qualification?: string[];
   openDate?: string;
   closeDate?: string;
   category?: string;
@@ -104,7 +105,7 @@ const CompanyJobsPage: React.FC = () => {
     title: "",
     description: "",
     company: companyName,
-    qualification: "",
+    qualification: [],
     openDate: "",
     closeDate: "",
     category: "",
@@ -116,7 +117,7 @@ const CompanyJobsPage: React.FC = () => {
   const [filterPositionType, setFilterPositionType] = useState("");
   const [filterPaymentType, setFilterPaymentType] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
-  const [filterQualification, setFilterQualification] = useState("");
+  const [filterQualification, setFilterQualification] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -177,7 +178,7 @@ const CompanyJobsPage: React.FC = () => {
     const matchesPosition = filterPositionType ? j.positionType === filterPositionType : true;
     const matchesPayment = filterPaymentType ? j.paymentType === filterPaymentType : true;
     const matchesLocation = filterLocation ? j.location === filterLocation : true;
-    const matchesQualification = filterQualification ? j.qualification === filterQualification : true;
+    const matchesQualification = filterQualification.length > 0 ? filterQualification.some(q => j.qualification && j.qualification.includes(q)) : true;
     const term = searchTerm.trim().toLowerCase();
     const matchesSearch =
       term === "" ||
@@ -248,16 +249,14 @@ const CompanyJobsPage: React.FC = () => {
               <option key={district} value={district}>{district}</option>
             ))}
           </select>
-          <select
-            value={filterQualification}
-            onChange={(e) => setFilterQualification(e.target.value)}
-            className="border rounded-lg p-3 bg-white shadow-sm focus:ring-2 focus:ring-blue-400"
-          >
-            <option value="">All Qualifications</option>
-            {QUALIFICATION_OPTIONS.map((qual) => (
-              <option key={qual} value={qual}>{qual}</option>
-            ))}
-          </select>
+          <div className="min-w-[200px]">
+            <MultiSelectDropdown
+              options={QUALIFICATION_OPTIONS}
+              selectedValues={filterQualification}
+              onChange={setFilterQualification}
+              placeholder="All Qualifications"
+            />
+          </div>
         </div>
 
         <button
@@ -268,7 +267,7 @@ const CompanyJobsPage: React.FC = () => {
               title: "",
               description: "",
               company: companyName,
-              qualification: "",
+              qualification: [],
               openDate: "",
               closeDate: "",
               category: "",
@@ -314,7 +313,7 @@ const CompanyJobsPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <GraduationCap className="w-4 h-4 text-emerald-600" />
                   <span className="text-sm bg-emerald-50 text-emerald-800 px-2 py-1 rounded-md font-medium">
-                    Qualification: {job.qualification || "N/A"}
+                    Qualification: {(job.qualification && job.qualification.length > 0) ? job.qualification.join(", ") : "N/A"}
                   </span>
                 </div>
 
@@ -363,7 +362,7 @@ const CompanyJobsPage: React.FC = () => {
                       title: job.title,
                       description: job.description,
                       company: companyName,
-                      qualification: job.qualification,
+                      qualification: job.qualification || [],
                       openDate: job.openDate,
                       closeDate: job.closeDate,
                       category: job.category,
@@ -418,19 +417,14 @@ const CompanyJobsPage: React.FC = () => {
                 readOnly
                 className="border rounded-lg p-3 bg-gray-100 text-gray-500"
               />
-              <select
-                value={formData.qualification}
-                onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
-                className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400"
-                required
-              >
-                <option value="">Select Qualification</option>
-                {QUALIFICATION_OPTIONS.map((qual) => (
-                  <option key={qual} value={qual}>
-                    {qual}
-                  </option>
-                ))}
-              </select>
+              <div className="w-full">
+                <MultiSelectDropdown
+                  options={QUALIFICATION_OPTIONS}
+                  selectedValues={formData.qualification as string[]}
+                  onChange={(selected: string[]) => setFormData({ ...formData, qualification: selected })}
+                  placeholder="Select Qualification(s)"
+                />
+              </div>
               <input
                 type="date"
                 placeholder="Open Date"

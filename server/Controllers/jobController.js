@@ -1,5 +1,5 @@
 // controllers/JobController.js
-import Job from "../models/Job.js";
+import Job from "../models/job.js";
 import User from "../models/User.js";
 import Admin from "../models/admin.js";
 import Notification from "../models/Notification.js";
@@ -45,12 +45,15 @@ export const createJob = async (req, res) => {
 
     const savedJob = await newJob.save();
 
-    const qualificationMatch = qualification && qualification.trim();
+    const qualificationMatch = Array.isArray(qualification) ? qualification : (qualification ? [qualification] : []);
     const categoryMatch = category && category.trim();
 
-    if (qualificationMatch || categoryMatch) {
+    if (qualificationMatch.length > 0 || categoryMatch) {
       const query = { role: "user", $or: [] };
-      if (qualificationMatch) query.$or.push({ qualification: { $regex: new RegExp(`^${qualificationMatch}$`, "i") } });
+      if (qualificationMatch.length > 0) {
+        const regexArray = qualificationMatch.map(q => new RegExp(`^${q.trim()}$`, "i"));
+        query.$or.push({ qualification: { $in: regexArray } });
+      }
       if (categoryMatch) query.$or.push({ qualificationCategory: { $regex: new RegExp(`^${categoryMatch}$`, "i") } });
 
       const matchedUsers = await User.find(query);
@@ -65,9 +68,9 @@ export const createJob = async (req, res) => {
         userId: user._id,
         type: "job",
         title: isClosingSoon ? `Job closing soon: ${title}` : `🚀 New Job Opportunity: ${title}`,
-        message: isClosingSoon 
+        message: isClosingSoon
           ? `Deadline approaching for ${title} at ${company}. Closes on ${jobCloseDate.toDateString()}.`
-          : `A new ${qualificationMatch} job opening at ${company} is now available.`,
+          : `A new ${qualificationMatch.join(', ')} job opening at ${company} is now available.`,
         referenceId: savedJob._id,
         read: false,
       }));
@@ -81,11 +84,11 @@ export const createJob = async (req, res) => {
       // ✅ Send specialized Job Alert to all matched users
       await Promise.all(
         matchedUsers.map((user) => {
-            if (isClosingSoon) {
-               return sendClosingSoonScenarioAlert(user.email, user.name, "Job Application", title, company, closeDate);
-            } else {
-               return sendJobAlert(user.email, user.name, "Created", title, company, openDate, closeDate);
-            }
+          if (isClosingSoon) {
+            return sendClosingSoonScenarioAlert(user.email, user.name, "Job Application", title, company, closeDate);
+          } else {
+            return sendJobAlert(user.email, user.name, "Created", title, company, openDate, closeDate);
+          }
         })
       );
 
@@ -163,12 +166,15 @@ export const updateJob = async (req, res) => {
     if (!updatedJob) return res.status(404).json({ message: "Job not found" });
 
     // ✅ Notify matched users about the update
-    const qualificationMatch = updatedJob.qualification && updatedJob.qualification.trim();
+    const qualificationMatch = Array.isArray(updatedJob.qualification) ? updatedJob.qualification : (updatedJob.qualification ? [updatedJob.qualification] : []);
     const categoryMatch = updatedJob.category && updatedJob.category.trim();
 
-    if (qualificationMatch || categoryMatch) {
+    if (qualificationMatch.length > 0 || categoryMatch) {
       const query = { role: "user", $or: [] };
-      if (qualificationMatch) query.$or.push({ qualification: { $regex: new RegExp(`^${qualificationMatch}$`, "i") } });
+      if (qualificationMatch.length > 0) {
+        const regexArray = qualificationMatch.map(q => new RegExp(`^${q.trim()}$`, "i"));
+        query.$or.push({ qualification: { $in: regexArray } });
+      }
       if (categoryMatch) query.$or.push({ qualificationCategory: { $regex: new RegExp(`^${categoryMatch}$`, "i") } });
 
       const matchedUsers = await User.find(query);
@@ -183,7 +189,7 @@ export const updateJob = async (req, res) => {
         userId: user._id,
         type: "job",
         title: isClosingSoon ? `⚠️ Update: Job closing soon - ${updatedJob.title}` : `🔄 Job Updated: ${updatedJob.title}`,
-        message: isClosingSoon 
+        message: isClosingSoon
           ? `Urgent update for ${updatedJob.title} at ${updatedJob.company}. Deadline is ${jobCloseDate.toDateString()}!`
           : `Some details for ${updatedJob.title} at ${updatedJob.company} have been updated.`,
         referenceId: updatedJob._id,
@@ -226,12 +232,15 @@ export const deleteJob = async (req, res) => {
     if (!deletedJob) return res.status(404).json({ message: "Job not found" });
 
     // Notify matched users that the job was removed
-    const qualificationMatch = deletedJob.qualification && deletedJob.qualification.trim();
+    const qualificationMatch = Array.isArray(deletedJob.qualification) ? deletedJob.qualification : (deletedJob.qualification ? [deletedJob.qualification] : []);
     const categoryMatch = deletedJob.category && deletedJob.category.trim();
 
-    if (qualificationMatch || categoryMatch) {
+    if (qualificationMatch.length > 0 || categoryMatch) {
       const query = { role: "user", $or: [] };
-      if (qualificationMatch) query.$or.push({ qualification: { $regex: new RegExp(`^${qualificationMatch}$`, "i") } });
+      if (qualificationMatch.length > 0) {
+        const regexArray = qualificationMatch.map(q => new RegExp(`^${q.trim()}$`, "i"));
+        query.$or.push({ qualification: { $in: regexArray } });
+      }
       if (categoryMatch) query.$or.push({ qualificationCategory: { $regex: new RegExp(`^${categoryMatch}$`, "i") } });
 
       const matchedUsers = await User.find(query);

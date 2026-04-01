@@ -1,4 +1,4 @@
-import Job from "../../models/Job.js";
+import Job from "../../models/job.js";
 import Course from "../../models/Course.js";
 import User from "../../models/User.js";
 import Notification from "../../models/Notification.js";

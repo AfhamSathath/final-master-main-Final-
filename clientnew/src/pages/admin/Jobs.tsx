@@ -5,6 +5,7 @@ import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
 import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
+import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 import {
   Edit,
   Trash2,
@@ -22,7 +23,7 @@ type Job = {
   title: string;
   description: string;
   company: string;
-  qualification?: string;
+  qualification?: string[];
   openDate?: string;
   closeDate?: string;
   category?: string;
@@ -96,13 +97,13 @@ const AdminJobsPage: React.FC = () => {
   const [filterLocation, setFilterLocation] = useState("");
   const [filterJobType, setFilterJobType] = useState("");
   const [filterPaymentType, setFilterPaymentType] = useState("");
-  const [filterQualification, setFilterQualification] = useState("");
+  const [filterQualification, setFilterQualification] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState<NewJob>({
     title: "",
     description: "",
     company: "",
-    qualification: "",
+    qualification: [],
     openDate: "",
     closeDate: "",
     category: "",
@@ -167,7 +168,7 @@ const AdminJobsPage: React.FC = () => {
     const matchesLocation = filterLocation ? job.location === filterLocation : true;
     const matchesJobType = filterJobType ? job.positionType === filterJobType : true;
     const matchesPaymentType = filterPaymentType ? job.paymentType === filterPaymentType : true;
-    const matchesQualification = filterQualification ? job.qualification === filterQualification : true;
+    const matchesQualification = filterQualification.length > 0 ? filterQualification.some(q => job.qualification && job.qualification.includes(q)) : true;
     const matchesSearch =
       searchTerm.trim() === "" ||
       job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -252,7 +253,7 @@ const AdminJobsPage: React.FC = () => {
               title: "",
               description: "",
               company: "",
-              qualification: "",
+              qualification: [],
               openDate: "",
               closeDate: "",
               category: "",
@@ -302,7 +303,7 @@ const AdminJobsPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <GraduationCap className="w-4 h-4 text-emerald-600" />
                   <span className="text-sm bg-emerald-50 text-emerald-800 px-2 py-1 rounded-md font-medium">
-                    Qualification: {job.qualification || "N/A"}
+                    Qualification: {(job.qualification && job.qualification.length > 0) ? job.qualification.join(", ") : "N/A"}
                   </span>
                 </div>
 
@@ -365,7 +366,7 @@ const AdminJobsPage: React.FC = () => {
                       title: job.title,
                       description: job.description,
                       company: job.company,
-                      qualification: job.qualification,
+                      qualification: job.qualification || [],
                       openDate: job.openDate,
                       closeDate: job.closeDate,
                       category: job.category,
@@ -439,21 +440,14 @@ const AdminJobsPage: React.FC = () => {
                   </option>
                 ))}
               </select>
-              <select
-                value={formData.qualification}
-                onChange={(e) =>
-                  setFormData({ ...formData, qualification: e.target.value })
-                }
-                className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400"
-                required
-              >
-                <option value="">Select Qualification</option>
-                {QUALIFICATION_OPTIONS.map((qual) => (
-                  <option key={qual} value={qual}>
-                    {qual}
-                  </option>
-                ))}
-              </select>
+              <div className="w-full">
+                <MultiSelectDropdown
+                  options={QUALIFICATION_OPTIONS}
+                  selectedValues={formData.qualification as string[]}
+                  onChange={(selected: string[]) => setFormData({ ...formData, qualification: selected })}
+                  placeholder="Select Qualification(s)"
+                />
+              </div>
               <input
                 type="date"
                 placeholder="Open Date"

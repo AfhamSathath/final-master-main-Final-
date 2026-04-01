@@ -5,6 +5,7 @@ import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
 import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
+import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 import {
   Edit,
   Trash2,
@@ -22,7 +23,7 @@ type Course = {
   name: string;
   description: string;
   institution: string;
-  qualification: string;
+  qualification?: string[];
   duration: string;
   category: string;
   location?: string;
@@ -83,7 +84,7 @@ const CompanyCoursesPage: React.FC = () => {
     name: "",
     description: "",
     institution: companyName,
-    qualification: "",
+    qualification: [],
     duration: "",
     category: "",
     location: "",
@@ -94,7 +95,7 @@ const CompanyCoursesPage: React.FC = () => {
   const [filterLocation, setFilterLocation] = useState("");
   const [filterCourseType, setFilterCourseType] = useState("");
   const [filterPaymentType, setFilterPaymentType] = useState("");
-  const [filterQualification, setFilterQualification] = useState("");
+  const [filterQualification, setFilterQualification] = useState<string[]>([]);
 
   useEffect(() => {
     setFormData((prev) => ({ ...prev, institution: companyName }));
@@ -154,7 +155,7 @@ const CompanyCoursesPage: React.FC = () => {
     const matchesLocation = filterLocation ? c.location === filterLocation : true;
     const matchesCourseType = filterCourseType ? c.courseType === filterCourseType : true;
     const matchesPaymentType = filterPaymentType ? c.paymentType === filterPaymentType : true;
-    const matchesQualification = filterQualification ? c.qualification === filterQualification : true;
+    const matchesQualification = filterQualification.length > 0 ? filterQualification.some(q => c.qualification && c.qualification.includes(q)) : true;
     return matchesCategory && matchesLocation && matchesCourseType && matchesPaymentType && matchesQualification;
   });
 
@@ -219,16 +220,14 @@ const CompanyCoursesPage: React.FC = () => {
               </option>
             ))}
           </select>
-          <select
-            value={filterQualification}
-            onChange={(e) => setFilterQualification(e.target.value)}
-            className="border rounded-lg p-3 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-400"
-          >
-            <option value="">All Qualifications</option>
-            {QUALIFICATION_OPTIONS.map((qual) => (
-              <option key={qual} value={qual}>{qual}</option>
-            ))}
-          </select>
+          <div className="min-w-[200px]">
+            <MultiSelectDropdown
+              options={QUALIFICATION_OPTIONS}
+              selectedValues={filterQualification}
+              onChange={setFilterQualification}
+              placeholder="All Qualifications"
+            />
+          </div>
         </div>
 
         <button
@@ -239,7 +238,7 @@ const CompanyCoursesPage: React.FC = () => {
               name: "",
               description: "",
               institution: companyName,
-              qualification: "",
+              qualification: [],
               duration: "",
               category: "",
             });
@@ -285,7 +284,7 @@ const CompanyCoursesPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <GraduationCap className="w-4 h-4 text-emerald-600" />
                   <span className="text-sm bg-emerald-50 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-100 px-2 py-1 rounded-md font-medium">
-                    Qualification: {course.qualification || "N/A"}
+                    Qualification: {(course.qualification && course.qualification.length > 0) ? course.qualification.join(", ") : "N/A"}
                   </span>
                 </div>
 
@@ -334,7 +333,7 @@ const CompanyCoursesPage: React.FC = () => {
                       name: course.name,
                       description: course.description,
                       institution: companyName,
-                      qualification: course.qualification,
+                      qualification: course.qualification || [],
                       duration: course.duration,
                       category: course.category,
                       courseType: course.courseType || "full-time",
@@ -390,19 +389,14 @@ const CompanyCoursesPage: React.FC = () => {
                 readOnly
                 className="border rounded-lg p-3 bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
               />
-              <select
-                value={formData.qualification}
-                onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
-                className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
-                required
-              >
-                <option value="">Select Qualification</option>
-                {QUALIFICATION_OPTIONS.map((qual) => (
-                  <option key={qual} value={qual}>
-                    {qual}
-                  </option>
-                ))}
-              </select>
+              <div className="w-full">
+                <MultiSelectDropdown
+                  options={QUALIFICATION_OPTIONS}
+                  selectedValues={formData.qualification as string[]}
+                  onChange={(selected: string[]) => setFormData({ ...formData, qualification: selected })}
+                  placeholder="Select Qualification(s)"
+                />
+              </div>
               <input
                 type="text"
                 placeholder="Duration"

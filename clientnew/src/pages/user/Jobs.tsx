@@ -7,6 +7,7 @@ import toast, { Toaster } from "react-hot-toast";
 import Linkify from "react-linkify";
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
 import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
+import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 
 interface Company {
   name?: string;
@@ -17,7 +18,7 @@ interface Job {
   title: string;
   description?: string;
   company?: Company | string;
-  qualification?: string;
+  qualification?: string[];
   openDate?: string;
   closeDate?: string;
   category?: string;
@@ -48,7 +49,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 const JobPage: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [qualificationFilter, setQualificationFilter] = useState("");
+  const [qualificationFilter, setQualificationFilter] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [locationFilter, setLocationFilter] = useState("");
   const [jobTypeFilter, setJobTypeFilter] = useState("");
@@ -118,11 +119,7 @@ const JobPage: React.FC = () => {
     const matchSearch =
       job.title.toLowerCase().includes(query) || companyName.includes(query);
 
-    const qual = job.qualification?.toLowerCase() || "";
-    const qFilter = qualificationFilter.toLowerCase();
-
-    const matchesQualification =
-      !qualificationFilter || (job.qualification || "").toLowerCase() === qualificationFilter.toLowerCase();
+    const matchesQualification = qualificationFilter.length > 0 ? qualificationFilter.some(q => job.qualification && job.qualification.includes(q)) : true;
 
     const matchJobType =
       !jobTypeFilter || (job.positionType || "").toLowerCase() === jobTypeFilter.toLowerCase();
@@ -184,16 +181,15 @@ const JobPage: React.FC = () => {
           <Search className="absolute left-3 top-2.5 text-blue-500" size={18} />
         </div>
 
-        <select
-          value={qualificationFilter}
-          onChange={(e) => setQualificationFilter(e.target.value)}
-          className="w-full md:w-80 border-2 border-green-400 focus:border-green-600 rounded-lg p-2"
-        >
-          <option value="">All Qualifications</option>
-          {QUALIFICATION_OPTIONS.map((qual) => (
-            <option key={qual} value={qual}>{qual}</option>
-          ))}
-        </select>
+        <div className="w-full md:w-80">
+          <MultiSelectDropdown
+            options={QUALIFICATION_OPTIONS}
+            selectedValues={qualificationFilter}
+            onChange={setQualificationFilter}
+            placeholder="All Qualifications"
+            className="md:max-w-[320px]"
+          />
+        </div>
 
         <select
           value={locationFilter}
@@ -284,7 +280,7 @@ const JobPage: React.FC = () => {
                 </p>
 
                 <p className="text-sm font-medium bg-green-100 text-green-800 px-3 py-1 rounded-full inline-block mb-2">
-                  Qualification: {job.qualification || "N/A"}
+                  Qualification: {(job.qualification && job.qualification.length > 0) ? job.qualification.join(", ") : "N/A"}
                 </p>
 
                 {job.location && (

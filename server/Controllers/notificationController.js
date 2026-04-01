@@ -1,6 +1,6 @@
 import Notification from "../models/Notification.js";
 import User from "../models/User.js";
-import Job from "../models/Job.js";
+import Job from "../models/job.js";
 import Course from "../models/Course.js";
 import { sendAlertEmail } from "../src/utils/otpService.js";
 import { emitNotification } from "../src/utils/socketManager.js";
@@ -145,8 +145,14 @@ export const syncNearDeadlineAndRecentAlerts = async (req, res) => {
 const isQualificationMatch = (user, qualification, category) => {
   if (!user) return false;
 
-  if (user.qualification && qualification && user.qualification.toLowerCase().trim() === qualification.toLowerCase().trim()) {
-    return true;
+  if (user.qualification && qualification) {
+    if (Array.isArray(qualification)) {
+      if (qualification.some(q => q.toLowerCase().trim() === user.qualification.toLowerCase().trim())) {
+        return true;
+      }
+    } else if (user.qualification.toLowerCase().trim() === qualification.toLowerCase().trim()) {
+      return true;
+    }
   }
 
   if (user.qualificationCategory && category && user.qualificationCategory.toLowerCase().trim() === category.toLowerCase().trim()) {

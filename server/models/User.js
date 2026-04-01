@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema({
 
 
   qualificationCategory: { type: String, default: "" },
-  qualification: { type: String, default: "" },
+  qualification: { type: [String], default: [] },
 }, { timestamps: true });
 
 
