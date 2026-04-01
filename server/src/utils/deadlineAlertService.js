@@ -194,6 +194,16 @@ export const sendDailyNewsDigest = async (user) => {
 
         await sendAlertEmail(user.email, user.name, "Your Personalized Alert News & Deadlines", message, `${process.env.FRONTEND_URL || 'http://localhost:8080'}/dashboard`);
 
+        // ✅ Create In-App Notification and Emit Socket for Audio
+        const dailyNotif = await Notification.create({
+            userId: user._id,
+            type: "news",
+            title: "📬 Your Daily Career Digest",
+            message: `Check your dashboard for ${deadlineJobs.length + deadlineCourses.length} upcoming deadlines and ${newJobs.length + newCourses.length} new opportunities!`,
+            read: false
+        });
+        emitNotification(user._id, dailyNotif);
+
         return true;
     } catch (error) {
         console.error("News Digest Error:", error);

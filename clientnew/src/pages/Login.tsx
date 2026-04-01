@@ -40,9 +40,24 @@ const Login: React.FC = () => {
       
       socket.emit("join", emailForOTP.toLowerCase().trim());
       
+      // ✅ Listen for OTP Sent Confirmation (with sound)
+      socket.on("otp-sent", (data: any) => {
+        console.log("⚡ [Socket] OTP Sent successfully to:", data.email);
+        playAlertSound(); // Trigger sound confirm
+      });
+
       socket.on("magic-link-verified", (data: any) => {
         console.log("⚡ [Socket] Magic link verified! Logging in...");
         setMagicLinkStatus("verified");
+
+        // ✅ Play Success Alert Sound
+        try {
+          const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3");
+          audio.volume = 0.5;
+          audio.play().catch(err => console.log("Audio play deferred", err));
+        } catch (err) {
+          console.error("Failed to play sound:", err);
+        }
         
         setTimeout(() => {
            const { token, _id, name, email, role } = data;
@@ -60,6 +75,17 @@ const Login: React.FC = () => {
       }
     };
   }, [step, loginType, emailForOTP, navigate]);
+
+  // ✅ Play Alert Sound Helper
+  const playAlertSound = (url = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3") => {
+    try {
+      const audio = new Audio(url);
+      audio.volume = 0.4;
+      audio.play().catch(err => console.log("Audio play deferred", err));
+    } catch (err) {
+      console.error("Failed to play sound:", err);
+    }
+  };
 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,6 +112,7 @@ const Login: React.FC = () => {
            setLoginType("magic-link");
            setStep(2);
            setMagicLinkStatus("waiting");
+           playAlertSound(); // ✅ Play Sent sound
            return;
         }
       }
@@ -110,6 +137,7 @@ const Login: React.FC = () => {
         setLoginType(useMagicLink ? "magic-link" : "otp");
         setStep(2);
         if (useMagicLink) setMagicLinkStatus("waiting");
+        playAlertSound(); // ✅ Play Sent sound
       } else {
         throw new Error(loginRes.data.message || "Failed to initiate login");
       }

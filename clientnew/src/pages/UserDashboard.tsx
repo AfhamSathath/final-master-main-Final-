@@ -97,7 +97,15 @@ const UserDashboard: React.FC = () => {
 
       // ✅ Play Notification Sound
       try {
-        const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+        const titleLower = notification.title?.toLowerCase() || "";
+        const isUrgent = titleLower.includes("closing soon") || titleLower.includes("alert") || titleLower.includes("urgent");
+        
+        // Use a more intense sound for urgent alerts
+        const soundUrl = isUrgent 
+          ? "https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3" 
+          : "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
+
+        const audio = new Audio(soundUrl);
         audio.volume = 0.5;
         audio.play().catch(err => console.log("Audio play deferred until interaction", err));
       } catch (err) {

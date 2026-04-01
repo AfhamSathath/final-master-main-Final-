@@ -1,4 +1,4 @@
-let io;
+export let io;
 
 /**
  * Initialize the socket manager with the Socket.io server instance.

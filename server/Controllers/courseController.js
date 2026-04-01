@@ -189,6 +189,24 @@ export const updateCourse = async (req, res) => {
       const courseCloseDate = updatedCourse.closeDate ? new Date(updatedCourse.closeDate) : null;
       const isClosingSoon = courseCloseDate && courseCloseDate <= in5Days;
 
+      // ✅ Create In-App Notifications for the update
+      const notifications = matchedUsers.map((user) => ({
+        userId: user._id,
+        type: "course",
+        title: isClosingSoon ? `⚠️ Update: Course closing soon - ${updatedCourse.name}` : `🎓 Course Updated: ${updatedCourse.name}`,
+        message: isClosingSoon 
+          ? `Urgent update for ${updatedCourse.name} at ${updatedCourse.institution}. Enrollment ends ${courseCloseDate.toDateString()}!`
+          : `Details for ${updatedCourse.name} at ${updatedCourse.institution} have been updated.`,
+        referenceId: updatedCourse._id,
+        read: false,
+      }));
+
+      if (notifications.length > 0) {
+        const savedNotifs = await Notification.insertMany(notifications);
+        // ✅ Real-time Socket Broadcast for Audio Alerts
+        savedNotifs.forEach(n => emitNotification(n.userId, n));
+      }
+
       await Promise.all(
         matchedUsers.map((user) => {
           if (isClosingSoon) {

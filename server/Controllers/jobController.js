@@ -178,6 +178,24 @@ export const updateJob = async (req, res) => {
       const jobCloseDate = updatedJob.closeDate ? new Date(updatedJob.closeDate) : null;
       const isClosingSoon = jobCloseDate && jobCloseDate <= in5Days;
 
+      // ✅ Create In-App Notifications for the update
+      const notifications = matchedUsers.map((user) => ({
+        userId: user._id,
+        type: "job",
+        title: isClosingSoon ? `⚠️ Update: Job closing soon - ${updatedJob.title}` : `🔄 Job Updated: ${updatedJob.title}`,
+        message: isClosingSoon 
+          ? `Urgent update for ${updatedJob.title} at ${updatedJob.company}. Deadline is ${jobCloseDate.toDateString()}!`
+          : `Some details for ${updatedJob.title} at ${updatedJob.company} have been updated.`,
+        referenceId: updatedJob._id,
+        read: false,
+      }));
+
+      if (notifications.length > 0) {
+        const savedNotifs = await Notification.insertMany(notifications);
+        // ✅ Real-time Socket Broadcast for Audio Alerts
+        savedNotifs.forEach(n => emitNotification(n.userId, n));
+      }
+
       await Promise.all(
         matchedUsers.map((user) => {
           if (isClosingSoon) {

@@ -31,7 +31,14 @@ const AdminDashboard: React.FC = () => {
        });
 
        try {
-         const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+         const titleLower = notification.title?.toLowerCase() || "";
+         const isUrgent = titleLower.includes("closing soon") || titleLower.includes("alert") || titleLower.includes("urgent");
+         
+         const soundUrl = isUrgent 
+           ? "https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3" 
+           : "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
+
+         const audio = new Audio(soundUrl);
          audio.volume = 0.5;
          audio.play().catch(e => console.log("Sound play deferred", e));
        } catch (e) {

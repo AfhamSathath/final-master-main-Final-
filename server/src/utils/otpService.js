@@ -1,5 +1,7 @@
 import nodemailer from "nodemailer";
 import crypto from "crypto";
+import { io } from "./socketManager.js";
+import User from "../../models/User.js";
 
 // Create transporter
 console.log("Initializing SMTP Transporter...");
@@ -16,9 +18,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-
-
-
 // Generate secure 6-digit OTP
 export function generateOTP() {
   return crypto.randomInt(100000, 1000000).toString();
@@ -26,13 +25,17 @@ export function generateOTP() {
 
 /**
  * Send OTP via email using Nodemailer.
- * @param {string} toEmail - Recipient email address.
- * @returns {Promise<Object>} - An object with {success, otp, messageId}.
+ * Also emits a socket event to trigger dashboard/login audio confirmation.
  */
 export async function sendOTP(toEmail, manualOtp = null) {
   try {
     const otp = manualOtp || generateOTP();
 
+    // ✅ Real-time Socket Broadcast for Login Audio
+    if (io) {
+        console.log(`📡 [OTP Service] Emitting otp-sent to: ${toEmail}`);
+        io.to(toEmail).emit("otp-sent", { email: toEmail });
+    }
 
     const mailOptions = {
       from: process.env.SMTP_FROM || "dddummy296@gmail.com",
@@ -65,18 +68,10 @@ export async function sendOTP(toEmail, manualOtp = null) {
     };
 
     const info = await transporter.sendMail(mailOptions);
-
-    return {
-      success: true,
-      otp,
-      messageId: info.messageId,
-    };
+    return { success: true, otp, messageId: info.messageId };
   } catch (error) {
     console.error("OTP send error:", error);
-    return {
-      success: false,
-      otp: null,
-    };
+    return { success: false, otp: null };
   }
 }
 
@@ -399,6 +394,25 @@ export async function sendDeadlineAlertEmail(toEmail, recipientName, summary) {
         `
     };
     const info = await transporter.sendMail(mailOptions);
+
+    // ✅ Real-time Socket Broadcast for Audio Alerts (Deadline News)
+    try {
+        const user = await User.findOne({ email: toEmail });
+        if (user && io) {
+            io.to(user._id.toString()).emit("newNotification", {
+                _id: "deadline-" + new Date().getTime(),
+                userId: user._id,
+                type: "news",
+                title: "⚠️ ACTION REQUIRED: Upcoming Deadlines",
+                message: "Several opportunities matching your profile close within 5 days. Secure your spot now!",
+                createdAt: new Date().toISOString(),
+                read: false
+            });
+        }
+    } catch (e) {
+        console.error("Deadline Socket Alert Failed", e);
+    }
+
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error("Deadline Alert Email Error:", error);
@@ -457,6 +471,25 @@ export async function sendClosingSoonScenarioAlert(toEmail, recipientName, entit
     };
 
     const info = await transporter.sendMail(mailOptions);
+
+    // ✅ Real-time Socket Broadcast for Audio Alerts (Scenario Logic)
+    try {
+        const user = await User.findOne({ email: toEmail });
+        if (user && io) {
+            io.to(user._id.toString()).emit("newNotification", {
+                _id: "scenario-" + new Date().getTime(),
+                userId: user._id,
+                type: entityType.toLowerCase().includes("job") ? "job" : "course",
+                title: `🚨 URGENT: ${entityType} Closing Soon!`,
+                message: `The ${entityType} "${entityName}" closes on ${cDate}. Details updated.`,
+                createdAt: new Date().toISOString(),
+                read: false
+            });
+        }
+    } catch (e) {
+        console.error("Scenario Socket Alert Failed", e);
+    }
+
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error("Scenario News Alert Error:", error);
