@@ -50,7 +50,7 @@ npm run dev
 ```
 
 ### Browser
-Open: **http://localhost:8080/register**
+Open: **http://localhost:8081/register**
 
 ---
 
@@ -326,7 +326,7 @@ Update `transporter` config in authRoutes.js
 ```bash
 cd server && npm start        # Terminal 1
 cd clientnew && npm run dev   # Terminal 2
-http://localhost:8080/register # Browser
+http://localhost:8081/register # Browser
 ```
 
 ### Step 2: Verify

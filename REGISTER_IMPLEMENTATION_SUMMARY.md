@@ -418,7 +418,7 @@ VITE_API_URL=http://localhost:5000
 ```
 PORT=5000
 MONGO_URI=mongodb://localhost:27017/jobportal
-CLIENT_URL=http://localhost:8080
+CLIENT_URL=http://localhost:8081
 JWT_SECRET=your_jwt_secret_key
 EMAIL_USER=your-email@gmail.com          # Optional (for real email)
 EMAIL_PASS=your-app-password             # Optional (for real email)

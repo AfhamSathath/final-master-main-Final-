@@ -134,7 +134,7 @@ export const login = async (req, res) => {
       account.magicTokenExpiry = Date.now() + 15 * 60 * 1000; // 15 mins
       await account.save();
 
-      const frontendUrl = process.env.CLIENT_URL || "http://localhost:8080";
+      const frontendUrl = process.env.CLIENT_URL || "http://localhost:8081";
       const magicLink = `${frontendUrl}/magic-login?token=${token}&email=${account.email}`;
 
       const mailRes = await sendMagicLink(account.email, account.name, magicLink);
@@ -239,7 +239,7 @@ export const requestMagicLink = async (req, res) => {
     account.magicTokenExpiry = Date.now() + 15 * 60 * 1000; // 15 mins
     await account.save();
 
-    const frontendUrl = process.env.CLIENT_URL || "http://localhost:8080";
+    const frontendUrl = process.env.CLIENT_URL || "http://localhost:8081";
     const magicLink = `${frontendUrl}/magic-login?token=${token}&email=${account.email}`;
 
     const mailRes = await sendMagicLink(account.email, account.name, magicLink);
@@ -276,7 +276,7 @@ export const forgotPassword = async (req, res) => {
     // Generate reset token
     const resetToken = crypto.randomBytes(32).toString("hex");
     user.resetToken = resetToken;
-    user.resetTokenExpire = Date.now() + 15 * 60 * 1000; // 15 mins
+    user.resetTokenExpiry = Date.now() + 15 * 60 * 1000; // 15 mins
     await user.save();
 
 
@@ -308,15 +308,15 @@ export const resetPassword = async (req, res) => {
     }
 
     const user =
-      (await User.findOne({ resetToken: token, resetTokenExpire: { $gt: Date.now() } })) ||
-      (await Company.findOne({ resetToken: token, resetTokenExpire: { $gt: Date.now() } })) ||
-      (await Admin.findOne({ resetToken: token, resetTokenExpire: { $gt: Date.now() } }));
+      (await User.findOne({ resetToken: token, resetTokenExpiry: { $gt: Date.now() } })) ||
+      (await Company.findOne({ resetToken: token, resetTokenExpiry: { $gt: Date.now() } })) ||
+      (await Admin.findOne({ resetToken: token, resetTokenExpiry: { $gt: Date.now() } }));
 
     if (!user) return res.status(400).json({ message: "Invalid or expired token" });
 
     user.password = await bcrypt.hash(password, 10);
     user.resetToken = undefined;
-    user.resetTokenExpire = undefined;
+    user.resetTokenExpiry = undefined;
     await user.save();
 
     return res.json({ message: "Password reset successful" });

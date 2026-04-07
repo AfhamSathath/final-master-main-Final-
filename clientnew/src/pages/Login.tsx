@@ -14,7 +14,16 @@ interface User {
   email: string;
   role: string;
   token?: string;
+  location?: string;
+  contactNumber?: string;
 }
+
+const fetchUserDetails = async (id: string, token: string) => {
+  const response = await axios.get(`${API_BASE}/api/users/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -59,10 +68,17 @@ const Login: React.FC = () => {
           console.error("Failed to play sound:", err);
         }
         
-        setTimeout(() => {
+        setTimeout(async () => {
            const { token, _id, name, email, role } = data;
            setToken(token);
-           setUser({ _id, name, email, role, token });
+
+           if (role === "user") {
+             const fullUser = await fetchUserDetails(_id, token);
+             setUser({ ...fullUser, token });
+           } else {
+             setUser({ _id, name, email, role, token });
+           }
+
            navigate(role === "admin" ? "/admin-dashboard" : role === "company" ? "/company-dashboard" : "/user-dashboard");
         }, 1500); // 1.5s delay for cool effect
       });
@@ -128,7 +144,14 @@ const Login: React.FC = () => {
            // Direct login (otpRequired was false)
            const { token, _id, name, email, role } = loginRes.data;
            setToken(token);
-           setUser({ _id, name, email, role, token });
+
+           if (role === "user") {
+             const fullUser = await fetchUserDetails(_id, token);
+             setUser({ ...fullUser, token });
+           } else {
+             setUser({ _id, name, email, role, token });
+           }
+
            navigate(role === "admin" ? "/admin-dashboard" : role === "company" ? "/company-dashboard" : "/user-dashboard");
            return;
         }
@@ -173,12 +196,18 @@ const Login: React.FC = () => {
           role: user.role,
           token: token
         };
-        setUser(userData);
+        let storedUser = userData;
+        if (userData.role === "user") {
+          const fullUser = await fetchUserDetails(userData._id, token);
+          storedUser = { ...fullUser, token };
+        }
+
+        setUser(storedUser);
 
         // Redirect based on role
-        if (userData.role === "admin") {
+        if (storedUser.role === "admin") {
           navigate("/admin-dashboard");
-        } else if (userData.role === "company") {
+        } else if (storedUser.role === "company") {
           navigate("/company-dashboard");
         } else {
           navigate("/user-dashboard");

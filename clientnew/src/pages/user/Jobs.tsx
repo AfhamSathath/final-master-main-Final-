@@ -6,6 +6,7 @@ import { io, Socket } from "socket.io-client";
 import toast, { Toaster } from "react-hot-toast";
 import Linkify from "react-linkify";
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
+import { getUser } from "@/utils/Auth";
 import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
 import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 
@@ -51,7 +52,7 @@ const JobPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [qualificationFilter, setQualificationFilter] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [locationFilter, setLocationFilter] = useState("");
+  const [locationFilter, setLocationFilter] = useState(() => getUser()?.location || "");
   const [jobTypeFilter, setJobTypeFilter] = useState("");
   const [paymentTypeFilter, setPaymentTypeFilter] = useState("");
   const [loading, setLoading] = useState(true);

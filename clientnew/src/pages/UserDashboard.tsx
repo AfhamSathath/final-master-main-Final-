@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { getUser, logout, getToken } from "@/utils/Auth";
 import { useNavigate } from "react-router-dom";
-import { Users, BookOpen, Briefcase, LogOut, Mail, Calendar } from "lucide-react";
+import { Users, BookOpen, Briefcase, LogOut, Mail, Calendar, MapPin } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -14,16 +14,9 @@ const roleColors: Record<string, string> = {
   company: "bg-green-100 text-green-600",
 };
 
-interface Stats {
-  enrolledCourses: number;
-  appliedJobs: number;
-  messages: number;
-}
-
 const UserDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUserState] = useState<any>(null);
-  const [stats, setStats] = useState<Stats>({ enrolledCourses: 0, appliedJobs: 0, messages: 0 });
 
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -73,11 +66,6 @@ const UserDashboard: React.FC = () => {
     });
     setSocket(newSocket);
 
-
-    newSocket.on("userStatsUpdate", (updatedStats: Stats) => {
-      setStats(updatedStats);
-      setLoading(false);
-    });
 
     const userId = normalizedUser._id || normalizedUser.id;
     if (userId) {
@@ -223,6 +211,15 @@ const UserDashboard: React.FC = () => {
                     </span>
                   </div>
                 </div>
+                {user?.location && (
+                  <div className="flex items-center space-x-3 p-2 bg-white rounded shadow-sm hover:bg-blue-50 transition-colors">
+                    <MapPin className="w-5 h-5 text-teal-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Preferred District</p>
+                      <p className="font-semibold">{user.location}</p>
+                    </div>
+                  </div>
+                )}
                 {user?.joinedDate && (
                   <div className="flex items-center space-x-3 p-2 bg-white rounded shadow-sm hover:bg-blue-50 transition-colors">
                     <Calendar className="w-5 h-5 text-yellow-400" />
@@ -235,6 +232,15 @@ const UserDashboard: React.FC = () => {
               </CardContent>
             </Card>
 
+            <div className="flex justify-center lg:justify-start">
+              <Button
+                variant="outline"
+                onClick={() => navigate("/profile")}
+                className="mt-4"
+              >
+                Edit District Preferences
+              </Button>
+            </div>
 
             <Card className="shadow-md hover:shadow-xl transition-shadow border-t-4 border-indigo-500">
               <CardHeader className="bg-indigo-50 rounded-t-lg">

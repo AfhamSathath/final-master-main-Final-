@@ -145,17 +145,26 @@ export const syncNearDeadlineAndRecentAlerts = async (req, res) => {
 const isQualificationMatch = (user, qualification, category) => {
   if (!user) return false;
 
-  if (user.qualification && qualification) {
-    if (Array.isArray(qualification)) {
-      if (qualification.some(q => q.toLowerCase().trim() === user.qualification.toLowerCase().trim())) {
-        return true;
-      }
-    } else if (user.qualification.toLowerCase().trim() === qualification.toLowerCase().trim()) {
+  const normalize = (value) => (typeof value === "string" ? value.toLowerCase().trim() : "");
+  const normalizeArray = (value) =>
+    Array.isArray(value)
+      ? value.map((item) => normalize(item)).filter(Boolean)
+      : [normalize(value)].filter(Boolean);
+
+  const userQualifications = normalizeArray(user.qualification);
+  const targetQualifications = normalizeArray(qualification);
+
+  if (userQualifications.length > 0 && targetQualifications.length > 0) {
+    if (userQualifications.some((uq) => targetQualifications.includes(uq))) {
       return true;
     }
   }
 
-  if (user.qualificationCategory && category && user.qualificationCategory.toLowerCase().trim() === category.toLowerCase().trim()) {
+  if (
+    user.qualificationCategory &&
+    category &&
+    normalize(user.qualificationCategory) === normalize(category)
+  ) {
     return true;
   }
 

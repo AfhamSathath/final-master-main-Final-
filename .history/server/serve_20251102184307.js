@@ -31,7 +31,7 @@ const server = http.createServer(app);
 
 export const io = new Server(server, {
   cors: {
-    origin: "http://localhost:8080", // your frontend
+    origin: "http://localhost:8081", // your frontend
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   },
@@ -47,7 +47,7 @@ io.on("connection", (socket) => {
 // Middleware
 // ========================
 app.use(express.json());
-const allowedOrigin = "http://localhost:8080"; // frontend URL
+const allowedOrigin = "http://localhost:8081"; // frontend URL
 
 app.use(
   cors({

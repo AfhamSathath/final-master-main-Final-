@@ -7,6 +7,7 @@ import toast, { Toaster } from "react-hot-toast";
 import Linkify from "react-linkify";
 
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
+import { getUser } from "@/utils/Auth";
 import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
 import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 
@@ -49,7 +50,7 @@ const CoursePage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [courseTypeFilter, setCourseTypeFilter] = useState("");
   const [paymentTypeFilter, setPaymentTypeFilter] = useState("");
-  const [locationFilter, setLocationFilter] = useState("");
+  const [locationFilter, setLocationFilter] = useState(() => getUser()?.location || "");
   const [loading, setLoading] = useState(true);
 
   const API_BASE_URL = "http://localhost:5000/api/courses";

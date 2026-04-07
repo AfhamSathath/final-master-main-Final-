@@ -4,7 +4,14 @@ import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
-import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
+import {
+  QUALIFICATION_OPTIONS,
+  QUALIFICATION_CATEGORIES,
+  QUALIFICATION_SUBOPTIONS,
+  ALL_QUALIFICATION_OPTIONS,
+  type QualificationCategory,
+} from "@/constants/qualifications";
+import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
 import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 
 // ------------------- API BASE -------------------
@@ -26,8 +33,12 @@ const registerValidationSchema = z
     confirmPassword: z.string().min(1, "Confirm password is required"),
     regNumber: z.string().optional(),
     address: z.string().optional(),
-    qualificationCategory: z.string().optional(),
+    qualificationCategory: z.union([
+      z.enum(QUALIFICATION_CATEGORIES),
+      z.literal("")
+    ]).optional(),
     qualification: z.array(z.string()).optional(),
+    district: z.string().optional(),
     userType: z.enum(["user", "company"]),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -49,7 +60,10 @@ const registerValidationSchema = z
   .refine(
     (data) => {
       if (data.userType === "user") {
-        return !!data.qualification && data.qualification.every(q => QUALIFICATION_OPTIONS.includes(q));
+        return (
+          !!data.qualification &&
+          data.qualification.every((q) => ALL_QUALIFICATION_OPTIONS.includes(q))
+        );
       }
       return true;
     },
@@ -61,7 +75,19 @@ const registerValidationSchema = z
   .refine(
     (data) => {
       if (data.userType === "user") {
-        const validCategories = ["Information Technology", "Business & Management", "Engineering", "Digital Marketing", "Healthcare"];
+        return !!data.district && SRI_LANKA_DISTRICTS.includes(data.district);
+      }
+      return true;
+    },
+    {
+      message: "Please select your preferred district",
+      path: ["district"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.userType === "user") {
+        const validCategories = QUALIFICATION_CATEGORIES;
         return !!data.qualificationCategory && validCategories.includes(data.qualificationCategory);
       }
       return true;
@@ -80,8 +106,9 @@ interface RegisterData {
   confirmPassword: string;
   regNumber?: string;
   address?: string;
+  district?: string;
 
-  qualificationCategory?: "" | "Information Technology" | "Business & Management" | "Engineering" | "Digital Marketing" | "Healthcare";
+  qualificationCategory?: QualificationCategory | "";
   qualification?: string[];
 
   userType: "user" | "company";
@@ -98,7 +125,8 @@ const Register: React.FC = () => {
     confirmPassword: "",
     regNumber: "",
     address: "",
-   qualificationCategory: "",
+    district: "",
+    qualificationCategory: "",
     qualification: [],
 
     userType: "user",
@@ -114,12 +142,22 @@ const Register: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const qualificationOptions =
+    formData.qualificationCategory &&
+    (formData.qualificationCategory in QUALIFICATION_SUBOPTIONS)
+      ? QUALIFICATION_SUBOPTIONS[formData.qualificationCategory as keyof typeof QUALIFICATION_SUBOPTIONS]
+      : QUALIFICATION_OPTIONS;
+
   // ------------------- INPUT HANDLER -------------------
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === "qualificationCategory" ? { qualification: [] } : {}),
+    }));
   };
 
   // ------------------- COMPANY VERIFICATION -------------------
@@ -177,12 +215,18 @@ const Register: React.FC = () => {
   // ------------------- DUPLICATE CHECK -------------------
   const checkDuplicate = async (): Promise<boolean> => {
     try {
-      const res = await axios.post(`${API_BASE}/api/check-duplicate`, {
+      const payload: any = {
         email: formData.email,
         phone: formData.phone,
-        regNumber: formData.regNumber,
-        name: formData.name,
-      });
+      };
+
+      if (formData.userType === "company") {
+        payload.name = formData.name;
+        payload.regNumber = formData.regNumber;
+        payload.userType = "company";
+      }
+
+      const res = await axios.post(`${API_BASE}/api/check-duplicate`, payload);
 
       if (res.data.exists) {
         toast.error("⚠️ Email, phone, or registration number already in use!");
@@ -312,7 +356,7 @@ const Register: React.FC = () => {
       if (formData.userType === "company") {
         const response = await axios.post(`${API_BASE}/api/companies`, {
           name: formData.name,
-          location: formData.address || "Sri Lanka",
+          location: formData.address || formData.district || "Sri Lanka",
           regNumber: formData.regNumber || undefined,
           email: formData.email,
           contactNumber: formData.phone,
@@ -329,10 +373,9 @@ const Register: React.FC = () => {
           name: formData.name,
           email: formData.email,
           contactNumber: formData.phone,
-
+          location: formData.district,
           qualificationCategory: formData.qualificationCategory,
           qualification: formData.qualification,
-
           password: formData.password,
         });
 
@@ -471,6 +514,25 @@ const Register: React.FC = () => {
                 />
               </div>
 
+              {/* Preferred District */}
+              <div>
+                <label className="block text-sm font-semibold mb-1 text-gray-700">
+                  Preferred District
+                </label>
+                <select
+                  name="district"
+                  value={formData.district}
+                  onChange={handleChange}
+                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-400"
+                >
+                  <option value="">Select your district</option>
+                  {SRI_LANKA_DISTRICTS.map((district) => (
+                    <option key={district} value={district}>
+                      {district}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               {/* Qualification for user */}
               {formData.userType === "user" && (
@@ -487,11 +549,11 @@ const Register: React.FC = () => {
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-400"
                     >
                       <option value="">Select category</option>
-                      <option value="Information Technology">Information Technology</option>
-                      <option value="Business & Management">Business & Management</option>
-                      <option value="Engineering">Engineering</option>
-                      <option value="Digital Marketing">Digital Marketing</option>
-                      <option value="Healthcare">Healthcare</option>
+                      {QUALIFICATION_CATEGORIES.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -500,7 +562,7 @@ const Register: React.FC = () => {
                       Qualification(s)
                     </label>
                     <MultiSelectDropdown
-                      options={QUALIFICATION_OPTIONS}
+                      options={qualificationOptions}
                       selectedValues={formData.qualification || []}
                       onChange={(selected: string[]) => setFormData({ ...formData, qualification: selected })}
                       placeholder="Select your qualification(s)"
@@ -591,6 +653,7 @@ const Register: React.FC = () => {
             <p className="text-sm text-gray-600 mt-4">
               Already have an account?{" "}
               <button
+                type="button"
                 onClick={() => navigate("/login")}
                 className="text-blue-600 font-semibold hover:underline"
               >
@@ -622,6 +685,7 @@ const Register: React.FC = () => {
             />
 
             <button
+              type="button"
               onClick={verifyOtpAndRegister}
               disabled={loading}
               className="w-full mt-4 bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition font-semibold shadow-md disabled:opacity-60"
@@ -630,6 +694,7 @@ const Register: React.FC = () => {
             </button>
 
             <button
+              type="button"
               onClick={resendOtp}
               disabled={loading}
               className="mt-3 text-blue-600 font-medium hover:underline disabled:opacity-60"

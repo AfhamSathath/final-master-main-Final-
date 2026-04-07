@@ -13,7 +13,6 @@ const userSchema = new mongoose.Schema({
   otpRequired: { type: Boolean, default: true },
   magicToken: { type: String },
   magicTokenExpiry: { type: Date },
-  resetTokenExpiry: { type: Date },
   
   
 

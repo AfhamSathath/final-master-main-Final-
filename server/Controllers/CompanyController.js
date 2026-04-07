@@ -58,10 +58,20 @@ export const createCompany = [
         return res.status(400).json({ message: "Please provide all required fields" });
       }
 
-      const existingCompany = await Company.findOne({ email });
-      if (existingCompany) {
+      const duplicateCompany = await Company.findOne({
+        $or: [
+          { email },
+          { contactNumber },
+          { regNumber },
+          { name },
+        ],
+      });
+      if (duplicateCompany) {
         if (req.file?.path) safeUnlink(req.file.path);
-        return res.status(400).json({ message: "Company already exists" });
+        return res.status(400).json({
+          message:
+            "A company with this email, phone, registration number, or name already exists.",
+        });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);

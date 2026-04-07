@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { getUser } from "@/utils/Auth";
 
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
 
@@ -29,7 +30,7 @@ const JobPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionType, setPositionType] = useState("");
   const [paymentType, setPaymentType] = useState("");
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState(() => getUser()?.location || "");
   const navigate = useNavigate();
 
   const API_BASE_URL = "http://localhost:5000/api/jobs";
@@ -59,7 +60,7 @@ const JobPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, positionType, paymentType]);
+  }, [searchTerm, positionType, paymentType, location]);
 
   useEffect(() => {
     fetchJobs();

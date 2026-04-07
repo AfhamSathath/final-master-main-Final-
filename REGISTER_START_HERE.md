@@ -135,11 +135,11 @@ npm start
 # Terminal 2 - Start Frontend
 cd clientnew
 npm run dev
-# Wait for: ✅ Local: http://localhost:8080
+# Wait for: ✅ Local: http://localhost:8081
 ```
 
 ### Test Steps
-1. Open http://localhost:8080/register
+1. Open http://localhost:8081/register
 2. Fill form:
    - Name: "Test User"
    - Email: "test@example.com"
@@ -449,7 +449,7 @@ Your registration system is working when:
 
 | What | Where |
 |------|-------|
-| Frontend | http://localhost:8080/register |
+| Frontend | http://localhost:8081/register |
 | Backend | http://localhost:5000 |
 | API Docs | REGISTER_API_REFERENCE.md |
 | Quick Start | REGISTER_QUICK_START.md |

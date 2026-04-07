@@ -4,6 +4,40 @@ import User from "../../models/User.js";
 import Notification from "../../models/Notification.js";
 import { sendWorkflowEmail, sendDeadlineAlertEmail, sendAlertEmail } from "./otpService.js";
 import { emitNotification } from "./socketManager.js";
+
+const normalizeQualificationValues = (qualification) => {
+    if (!qualification) return [];
+    if (Array.isArray(qualification)) {
+        return qualification
+            .map((q) => (typeof q === "string" ? q.trim() : q ? String(q).trim() : ""))
+            .filter(Boolean);
+    }
+    const trimmed = String(qualification).trim();
+    return trimmed ? [trimmed] : [];
+};
+
+const normalizeTextValue = (value) => {
+    if (!value && value !== 0) return null;
+    const text = String(value).trim();
+    return text.length > 0 ? text : null;
+};
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const buildMatchingCriteria = (qualifications, category) => {
+    const criteria = [];
+    if (qualifications.length > 0) {
+        criteria.push({
+            qualification: {
+                $in: qualifications.map((qual) => new RegExp(`^${escapeRegex(qual)}$`, "i")),
+            },
+        });
+    }
+    if (category) {
+        criteria.push({ category: { $regex: new RegExp(`^${escapeRegex(category)}$`, "i") } });
+    }
+    return criteria;
+};
 /**
  * Service to calculate and send deadline alerts for a particular user.
  * Aligned with QJC brand.
@@ -21,15 +55,13 @@ export const checkAndSendDeadlineAlert = async (user, daysWindow = 5) => {
         targetDate.setDate(today.getDate() + daysWindow);
         targetDate.setHours(23, 59, 59, 999);
 
-        const userQual = user.qualification ? user.qualification.trim() : null;
-        const userCat = user.qualificationCategory ? user.qualificationCategory.trim() : null;
+        const userQualifications = normalizeQualificationValues(user.qualification);
+        const userCat = normalizeTextValue(user.qualificationCategory);
 
         // Skip users without profile data
-        if (!userQual && !userCat) return null;
+        if (userQualifications.length === 0 && !userCat) return null;
 
-        const matchingCriteria = [];
-        if (userQual) matchingCriteria.push({ qualification: { $regex: new RegExp(`^${userQual}$`, "i") } });
-        if (userCat) matchingCriteria.push({ category: { $regex: new RegExp(`^${userCat}$`, "i") } });
+        const matchingCriteria = buildMatchingCriteria(userQualifications, userCat);
 
         // Find matching jobs with upcoming deadlines
         const jobs = await Job.find({
@@ -143,14 +175,12 @@ export const sendDailyNewsDigest = async (user) => {
         const newDate = new Date();
         newDate.setDate(today.getDate() - 7);
 
-        const userQual = user.qualification ? user.qualification.trim() : null;
-        const userCat = user.qualificationCategory ? user.qualificationCategory.trim() : null;
+        const userQualifications = normalizeQualificationValues(user.qualification);
+        const userCat = normalizeTextValue(user.qualificationCategory);
 
-        if (!userQual && !userCat) return null;
+        if (userQualifications.length === 0 && !userCat) return null;
 
-        const matchingCriteria = [];
-        if (userQual) matchingCriteria.push({ qualification: { $regex: new RegExp(`^${userQual}$`, "i") } });
-        if (userCat) matchingCriteria.push({ category: { $regex: new RegExp(`^${userCat}$`, "i") } });
+        const matchingCriteria = buildMatchingCriteria(userQualifications, userCat);
 
         // Deadlines
         const deadlineJobs = await Job.find({
@@ -192,7 +222,7 @@ export const sendDailyNewsDigest = async (user) => {
 
         message += `Log in to your Dashboard to review these opportunities and take action!`;
 
-        await sendAlertEmail(user.email, user.name, "Your Personalized Alert News & Deadlines", message, `${process.env.FRONTEND_URL || 'http://localhost:8080'}/dashboard`);
+        await sendAlertEmail(user.email, user.name, "Your Personalized Alert News & Deadlines", message, `${process.env.FRONTEND_URL || 'http://localhost:8081'}/dashboard`);
 
         // ✅ Create In-App Notification and Emit Socket for Audio
         const dailyNotif = await Notification.create({

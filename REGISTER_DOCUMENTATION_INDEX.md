@@ -216,7 +216,7 @@ Login with credentials
 - Frontend: `npm run dev` (in clientnew folder)
 
 **Test Steps:**
-1. Open http://localhost:8080/register
+1. Open http://localhost:8081/register
 2. Fill form with valid data
 3. Click "Register"
 4. Check server console for OTP
@@ -290,7 +290,7 @@ For detailed troubleshooting, see [REGISTER_TROUBLESHOOTING.md](./REGISTER_TROUB
 - [ ] Read REGISTER_QUICK_START.md
 - [ ] Backend running with `npm start`
 - [ ] Frontend running with `npm run dev`
-- [ ] Navigate to http://localhost:8080/register
+- [ ] Navigate to http://localhost:8081/register
 - [ ] Test registration with valid data
 - [ ] Verify OTP in server console
 - [ ] Complete registration flow

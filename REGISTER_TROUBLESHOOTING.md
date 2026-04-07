@@ -358,8 +358,8 @@ How to Fix:
 ```
 Option A: Check Frontend Running
 1. Open terminal where you ran "npm run dev"
-2. Look for: "Local: http://localhost:8080"
-3. Or check: "8080" port mentioned
+2. Look for: "Local: http://localhost:8081"
+3. Or check: "8081" port mentioned
 4. If not running, do:
    cd clientnew
    npm run dev
@@ -380,7 +380,7 @@ Option C: Clear Browser Cache
 2. Select "All time"
 3. Check "Cookies and cached images"
 4. Click "Clear data"
-5. Go back to http://localhost:8080/register
+5. Go back to http://localhost:8081/register
 6. Refresh page (F5)
 
 Option D: Install Dependencies
@@ -393,10 +393,10 @@ Option D: Install Dependencies
 4. Open browser to correct port
 
 Option E: Check URL
-1. Should be: http://localhost:8080/register
+1. Should be: http://localhost:8081/register
 2. Not: http://localhost:5000/register
 3. Not: http://localhost:3000/register
-4. Port 8080 is frontend
+4. Port 8081 is frontend
 5. Port 5000 is backend
 ```
 
@@ -504,7 +504,7 @@ Option C: Check CORS Configuration
 5. Restart backend
 
 Option D: Check Port Numbers
-Frontend: localhost:8080 ✓
+Frontend: localhost:8081 ✓
 Backend: localhost:5000 ✓
 Database: localhost:27017 ✓
 
@@ -534,7 +534,7 @@ Before reporting issue, check:
 - [ ] Backend running? (`npm start` in server folder shows no errors)
 - [ ] Frontend running? (`npm run dev` in clientnew folder shows no errors)
 - [ ] MongoDB running? (Check services or terminal)
-- [ ] Correct URL? (http://localhost:8080/register)
+- [ ] Correct URL? (http://localhost:8081/register)
 - [ ] Form filled correctly? (All fields valid data)
 - [ ] OTP visible in server console? (Look at right terminal)
 - [ ] Correct OTP entered? (Copy from console)
@@ -632,7 +632,7 @@ If registration is slow:
 
 You'll know it's working when:
 
-✅ Form loads at http://localhost:8080/register
+✅ Form loads at http://localhost:8081/register
 ✅ Can fill form with valid data
 ✅ Click Register button
 ✅ OTP appears in server console

@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import Company from "../models/Company.js";
 import bcrypt from "bcryptjs";
 import { sendWorkflowEmail } from "../src/utils/otpService.js";
 import { checkAndSendDeadlineAlert } from "../src/utils/deadlineAlertService.js";
@@ -7,11 +8,17 @@ import { checkAndSendDeadlineAlert } from "../src/utils/deadlineAlertService.js"
 export const createUser = async (req, res) => {
   try {
     const { name, email, password, role, qualificationCategory, qualification, contactNumber, location } = req.body;
+    const normalizedEmail = email?.toLowerCase().trim();
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+    // Check if user already exists by email or phone across User and Company collections
+    const duplicateUser = await User.findOne({
+      $or: [{ email: normalizedEmail }, { contactNumber }],
+    });
+    const duplicateCompany = await Company.findOne({
+      $or: [{ email: normalizedEmail }, { contactNumber }],
+    });
+    if (duplicateUser || duplicateCompany) {
+      return res.status(400).json({ message: "Email or phone already registered." });
     }
 
     // Hash password
@@ -30,18 +37,18 @@ export const createUser = async (req, res) => {
 
     await newUser.save();
 
-    // ✅ Send Welcome Email (Branded for QJC)
-    await sendWorkflowEmail(
+    res.status(201).json({ message: "User created successfully", user: newUser });
+
+    // ✅ Send Welcome Email (Branded for QJC) - do not block user creation
+    sendWorkflowEmail(
       newUser.email,
       newUser.name,
       "Welcome to the Job Portal",
       `Welcome to the Qualification Based Job Finder System for Sri Lanka. Your account has been successfully created with the role: **${newUser.role}**.\n\nYou can now log in to update your educational qualifications and search for your ideal job.`
-    );
+    ).catch((err) => console.error("Welcome email failed:", err));
 
-    // ✅ Immediate Check for matching deadlines (Real-world scenario)
-    await checkAndSendDeadlineAlert(newUser);
-
-    res.status(201).json({ message: "User created successfully", user: newUser });
+    // ✅ Immediate Check for matching deadlines (Real-world scenario) - async notification only
+    checkAndSendDeadlineAlert(newUser).catch((err) => console.error("Deadline alert failed:", err));
   } catch (error) {
     res.status(500).json({ message: "Error creating user", error: error.message });
   }

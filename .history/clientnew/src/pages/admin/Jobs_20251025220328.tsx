@@ -17,7 +17,7 @@ type Job = {
 
 type NewJob = Omit<Job, "_id">;
 
-const API_BASE = "http://localhost:8080";
+const API_BASE = "http://localhost:8081";
 const socket: Socket = io(API_BASE);
 
 const CATEGORY_OPTIONS = ["IT","Finance","Management","Marketing","HR"];

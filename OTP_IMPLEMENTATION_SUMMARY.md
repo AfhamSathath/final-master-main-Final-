@@ -192,7 +192,7 @@ curl -X POST http://localhost:5000/api/auth/reset-password \
 ```
 
 ### Test via UI
-1. Navigate to `http://localhost:8080/forgot-password`
+1. Navigate to `http://localhost:8081/forgot-password`
 2. Enter registered email
 3. Check email inbox for OTP
 4. Enter OTP on next screen

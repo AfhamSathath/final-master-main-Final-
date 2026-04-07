@@ -126,7 +126,7 @@ Full OTP-based forgot password flow has been implemented using Nodemailer for se
 ```env
 PORT=5000
 MONGO_URI=mongodb://localhost:27017/finaljob_edu
-CLIENT_URL=http://localhost:8080
+CLIENT_URL=http://localhost:8081
 JWT_SECRET=23c1674ca310f5ddf32b4c1705144e5aa695e151436b72ecac00d94997e779746480cad6332b6182
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASS=your-16-char-app-password

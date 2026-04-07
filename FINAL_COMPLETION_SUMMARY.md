@@ -52,11 +52,11 @@ npm start
 ```bash
 cd clientnew
 npm run dev
-# Wait for: ✅ Local: http://localhost:8080
+# Wait for: ✅ Local: http://localhost:8081
 ```
 
 ### Browser: Test Registration
-1. Open http://localhost:8080/register
+1. Open http://localhost:8081/register
 2. Fill form with test data
 3. Click "Register"
 4. Check server console for OTP

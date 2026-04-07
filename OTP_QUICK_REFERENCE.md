@@ -19,7 +19,7 @@ cd server && npm run dev
 ```
 
 ### Step 4: Test Flow
-Visit: `http://localhost:8080/forgot-password`
+Visit: `http://localhost:8081/forgot-password`
 
 ---
 

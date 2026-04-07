@@ -243,7 +243,7 @@ This code will expire in 10 minutes
 ### Test Steps
 
 1. **Open Registration Page**
-   - Navigate to http://localhost:8080/register
+   - Navigate to http://localhost:8081/register
    
 2. **Fill Registration Form**
    - Name: "Test User"

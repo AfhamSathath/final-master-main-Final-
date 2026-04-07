@@ -44,7 +44,7 @@ npm start
 cd clientnew
 npm run dev
 
-# Then open: http://localhost:8080/register
+# Then open: http://localhost:8081/register
 ```
 
 ## During Testing

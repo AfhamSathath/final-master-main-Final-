@@ -125,10 +125,10 @@ Look for: ✅ **Server running on port 5000**
 cd clientnew
 npm run dev
 ```
-Look for: ✅ **Local: http://localhost:8080**
+Look for: ✅ **Local: http://localhost:8081**
 
 ### 3. Test Registration
-1. Open: http://localhost:8080/register
+1. Open: http://localhost:8081/register
 2. Fill form with valid data
 3. Click "Register"
 4. Check server console for OTP:
@@ -295,7 +295,7 @@ Look for: ✅ **Local: http://localhost:8080**
 
 - [ ] Backend running (`npm start`)
 - [ ] Frontend running (`npm run dev`)
-- [ ] Navigate to http://localhost:8080/register
+- [ ] Navigate to http://localhost:8081/register
 - [ ] Fill form with valid data
 - [ ] Click "Register" button
 - [ ] See OTP in server console
@@ -460,7 +460,7 @@ You now have a **production-ready registration system** with:
 
 | What | Where |
 |------|-------|
-| Frontend | http://localhost:8080/register |
+| Frontend | http://localhost:8081/register |
 | Backend | http://localhost:5000 |
 | Quick start | REGISTER_QUICK_START.md |
 | API docs | REGISTER_API_REFERENCE.md |
@@ -481,7 +481,7 @@ cd server && npm start
 cd clientnew && npm run dev
 
 # Browser
-http://localhost:8080/register
+http://localhost:8081/register
 ```
 
 **Then check:** REGISTER_QUICK_START.md for detailed steps

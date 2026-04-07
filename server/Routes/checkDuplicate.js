@@ -6,10 +6,10 @@ const router = express.Router();
 
 // ==================== CHECK DUPLICATES ====================
 // POST /api/check-duplicate
-// body: { name?, email?, phone?, regNumber? }
+// body: { userType?, name?, email?, phone?, regNumber? }
 router.post("/", async (req, res) => {
   try {
-    const { name, email, phone, regNumber } = req.body || {};
+    const { userType, name, email, phone, regNumber } = req.body || {};
 
     // Validate input
     if (!name && !email && !phone && !regNumber) {
@@ -26,10 +26,10 @@ router.post("/", async (req, res) => {
     if (phone) userQuery.push({ contactNumber: phone });
 
     const companyQuery = [];
-    if (name) companyQuery.push({ name });
+    if (userType === "company" && name) companyQuery.push({ name });
     if (email) companyQuery.push({ email });
     if (phone) companyQuery.push({ contactNumber: phone });
-    if (regNumber) companyQuery.push({ regNumber });
+    if (userType === "company" && regNumber) companyQuery.push({ regNumber });
 
     // Run queries only if fields exist
     const userExists =

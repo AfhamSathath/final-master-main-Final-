@@ -242,7 +242,7 @@ npm run dev
 ```
 
 ### Test Steps
-1. Open http://localhost:8080/register
+1. Open http://localhost:8081/register
 2. Fill form:
    - Name: "Test User"
    - Email: "test@example.com"
@@ -307,7 +307,7 @@ VITE_API_URL=http://localhost:5000
 ```
 PORT=5000
 MONGO_URI=mongodb://localhost:27017/jobportal
-CLIENT_URL=http://localhost:8080
+CLIENT_URL=http://localhost:8081
 JWT_SECRET=your_secret_key
 EMAIL_USER=your-email@gmail.com (optional for real email)
 EMAIL_PASS=your-app-password (optional for real email)
@@ -436,7 +436,7 @@ You'll know implementation is successful when:
 
 **API Base:** `http://localhost:5000`
 
-**Frontend Port:** `8080`
+**Frontend Port:** `8081`
 **Backend Port:** `5000`
 **Database Port:** `27017`
 

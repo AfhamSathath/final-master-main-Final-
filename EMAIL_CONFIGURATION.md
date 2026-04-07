@@ -25,7 +25,7 @@ Create `server/.env`:
 ```env
 PORT=5000
 MONGO_URI=mongodb://localhost:27017/finaljob_edu
-CLIENT_URL=http://localhost:8080
+CLIENT_URL=http://localhost:8081
 JWT_SECRET=23c1674ca310f5ddf32b4c1705144e5aa695e151436b72ecac00d94997e779746480cad6332b6182
 EMAIL_USER=your-name@gmail.com
 EMAIL_PASS=abcd efgh ijkl mnop
@@ -105,7 +105,7 @@ curl -X POST http://localhost:5000/api/auth/forgot-password \
 ### Option 3: Using Frontend
 
 1. Start dev server: `npm run dev` (in clientnew)
-2. Go to `http://localhost:8080/forgot-password`
+2. Go to `http://localhost:8081/forgot-password`
 3. Enter your registered email
 4. Click "Send OTP"
 5. Check email inbox

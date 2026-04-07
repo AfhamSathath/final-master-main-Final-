@@ -116,7 +116,7 @@ export const forgotPassword = async (req, res) => {
       },
     });
 
-    const resetLink = `http://localhost:8080/reset-password/${resetToken}`;
+    const resetLink = `http://localhost:8081/reset-password/${resetToken}`;
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,

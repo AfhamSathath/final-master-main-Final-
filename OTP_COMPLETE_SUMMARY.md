@@ -87,7 +87,7 @@ That's it! 🎉
 ## 🧪 How to Test
 
 ### Test 1: Request OTP (via UI)
-1. Navigate to `http://localhost:8080/forgot-password`
+1. Navigate to `http://localhost:8081/forgot-password`
 2. Enter your registered email
 3. Click "Send OTP"
 4. Check inbox for OTP email
@@ -130,7 +130,7 @@ cd server
 npm run dev
 
 # 3. Test forgot password flow
-# Navigate to http://localhost:8080/forgot-password
+# Navigate to http://localhost:8081/forgot-password
 ```
 
 ---

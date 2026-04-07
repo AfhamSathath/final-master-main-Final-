@@ -1,20 +1,32 @@
+import dotenv from "dotenv";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
 import { io } from "./socketManager.js";
 import User from "../../models/User.js";
 
+dotenv.config();
+
 // Create transporter
 console.log("Initializing SMTP Transporter...");
-console.log("Host:", process.env.SMTP_HOST || "DEFAULT: smtp.gmail.com");
-console.log("User:", process.env.SMTP_USER || "DEFAULT: dddummy296@gmail.com");
+console.log("Host:", process.env.SMTP_HOST || "smtp.gmail.com");
+
+const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER;
+const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
+console.log("SMTP credentials configured:", smtpUser ? "YES" : "NO");
+
+if (!smtpUser || !smtpPass) {
+  console.warn(
+    "⚠️ Warning: SMTP_USER/EMAIL_USER and SMTP_PASS/EMAIL_PASS environment variables are not set. Email functionality will not work."
+  );
+}
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",
   port: parseInt(process.env.SMTP_PORT) || 465,
   secure: true,
   auth: {
-    user: process.env.SMTP_USER || "dddummy296@gmail.com",
-    pass: process.env.SMTP_PASS || "ttfc gjxe utgb fywc",
+    user: smtpUser,
+    pass: smtpPass,
   },
 });
 
@@ -38,7 +50,7 @@ export async function sendOTP(toEmail, manualOtp = null) {
     }
 
     const mailOptions = {
-      from: process.env.SMTP_FROM || "dddummy296@gmail.com",
+      from: process.env.SMTP_FROM || smtpUser,
       to: toEmail,
       subject: "🔒 Your Secure OTP Code - Qualification Job Finder",
       html: `
@@ -81,7 +93,7 @@ export async function sendOTP(toEmail, manualOtp = null) {
 export async function sendWorkflowEmail(toEmail, recipientName, subject, message) {
   try {
     const mailOptions = {
-      from: process.env.SMTP_FROM || "dddummy296@gmail.com",
+      from: process.env.SMTP_FROM || smtpUser,
       to: toEmail,
       subject: `🔔 QJC Alert: ${subject}`,
       html: `
@@ -97,7 +109,7 @@ export async function sendWorkflowEmail(toEmail, recipientName, subject, message
               ${message.replace(/\n/g, '<br>')}
             </div>
             <div style="margin-top: 30px; text-align: center;">
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:8080'}/login" 
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:8081'}/login" 
                  style="background: #007bff; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block; box-shadow: 0 4px 6px rgba(0,123,255,0.2);">
                 View Details in Dashboard
               </a>
@@ -125,7 +137,7 @@ export async function sendWorkflowEmail(toEmail, recipientName, subject, message
 export async function sendAlertEmail(toEmail, recipientName, title, newsContent, actionLink = null) {
   try {
     const mailOptions = {
-      from: process.env.SMTP_FROM || "dddummy296@gmail.com",
+      from: process.env.SMTP_FROM || smtpUser,
       to: toEmail,
       subject: `🚨 Important Alert: ${title}`,
       html: `
@@ -190,7 +202,7 @@ export async function sendBulkNotification(users, subject, message, type = 'work
 export async function sendMagicLink(toEmail, recipientName, magicLink) {
   try {
     const mailOptions = {
-      from: process.env.SMTP_FROM || "dddummy296@gmail.com",
+      from: process.env.SMTP_FROM || smtpUser,
       to: toEmail,
       subject: `✨ One-Click Login - QJC`,
       html: `
@@ -359,7 +371,7 @@ export async function sendLoginAlert(toEmail, recipientName) {
 export async function sendDeadlineAlertEmail(toEmail, recipientName, summary) {
   try {
     const mailOptions = {
-      from: process.env.SMTP_FROM || "dddummy296@gmail.com",
+      from: process.env.SMTP_FROM || smtpUser,
       to: toEmail,
       subject: `🚨 Action Required: Deadlines Approaching!`,
       html: `
@@ -382,7 +394,7 @@ export async function sendDeadlineAlertEmail(toEmail, recipientName, summary) {
                 Our real-world data indicates that completing your application now significantly improves your chances of being considered by the reviewing committee.
               </p>
               <div style="text-align: center;">
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:8080'}/login" 
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:8081'}/login" 
                    style="background: #dc3545; color: white; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: 700; display: inline-block;">
                   TAKE ACTION NOW
                 </a>
@@ -430,7 +442,7 @@ export async function sendClosingSoonScenarioAlert(toEmail, recipientName, entit
     const cDate = closeDate ? new Date(closeDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : "Not Specified";
 
     const mailOptions = {
-      from: process.env.SMTP_FROM || "dddummy296@gmail.com",
+      from: process.env.SMTP_FROM || smtpUser,
       to: toEmail,
       subject: `🕒 URGENT: ${isUpdate ? 'Details Updated & ' : ''}${entityType} Closing Soon - ${entityName}`,
       html: `
@@ -458,7 +470,7 @@ export async function sendClosingSoonScenarioAlert(toEmail, recipientName, entit
               </p>
             </div>
             <div style="text-align: center;">
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:8080'}/login" 
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:8081'}/login" 
                  style="background: #b30000; color: white; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block; font-size: 15px; box-shadow: 0 4px 8px rgba(179,0,0,0.2);">
                 SECURE YOUR SPOT NOW
               </a>

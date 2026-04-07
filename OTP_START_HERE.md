@@ -49,7 +49,7 @@ EMAIL_PASS=xxxx xxxx xxxx xxxx
 cd server && npm run dev
 ```
 
-Visit: `http://localhost:8080/forgot-password` ✅
+Visit: `http://localhost:8081/forgot-password` ✅
 
 ---
 
