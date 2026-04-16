@@ -151,11 +151,11 @@ export async function sendWorkflowEmail(toEmail, recipientName, subject, message
 export async function sendAdminNewCompanyNotification(companyData) {
   try {
     const adminEmailEnv = (process.env.ADMIN_EMAIL || "").trim();
-    
+
     // 1. Get all registered admins from Database
     const dbAdmins = await Admin.find({});
     const dbAdminEmails = dbAdmins.map(a => a.email.trim().toLowerCase());
-    
+
     // 2. Combine with ADMIN_EMAIL from .env and filter duplicates
     const allAdminRecipients = [...new Set([
       ...dbAdminEmails,
@@ -188,7 +188,7 @@ export async function sendAdminNewCompanyNotification(companyData) {
             </p>
             <div style="background: #f8fbff; border-top: 4px solid #007bff; padding: 25px; margin: 30px 0; border-radius: 4px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
               <h4 style="margin: 0 0 15px 0; color: #004085; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #e7f1ff; padding-bottom: 8px;">Company Dossier:</h4>
-              <p style="margin: 12px 0; font-size: 15px; color: #444;"><strong>Entity Name:</strong> <span style="color: #000;">${companyData.name}</span></p>
+              <p style="margin: 12px 0; font-size: 15px; color: #444;"><strong>Company/Institution Name:</strong> <span style="color: #000;">${companyData.name}</span></p>
               <p style="margin: 12px 0; font-size: 15px; color: #444;"><strong>Official Email:</strong> ${companyData.email}</p>
               <p style="margin: 12px 0; font-size: 15px; color: #444;"><strong>BR Reg Number:</strong> ${companyData.regNumber}</p>
               <p style="margin: 12px 0; font-size: 15px; color: #444;"><strong>Primary Location:</strong> ${companyData.location}</p>

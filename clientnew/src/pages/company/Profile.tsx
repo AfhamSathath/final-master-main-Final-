@@ -20,7 +20,7 @@ interface Company {
   location: string;
   verificationStatus: "pending" | "verified" | "rejected";
   rejectionReason?: string;
-  joinedDate?: string;
+  createdAt?: string;
 }
 
 const CompanyProfile: React.FC = () => {
@@ -257,7 +257,7 @@ const CompanyProfile: React.FC = () => {
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Joined Date</label>
                     <Input
-                      value={company.joinedDate ? new Date(company.joinedDate).toLocaleDateString() : "N/A"}
+                      value={company.createdAt ? new Date(company.createdAt).toLocaleDateString() : "N/A"}
                       readOnly
                       className="bg-slate-50 border-slate-200 text-slate-600 font-bold h-12 rounded-xl focus:ring-0 cursor-not-allowed shadow-inner"
                     />

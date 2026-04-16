@@ -220,12 +220,12 @@ const UserDashboard: React.FC = () => {
                     </div>
                   </div>
                 )}
-                {user?.joinedDate && (
+                {user?.createdAt && (
                   <div className="flex items-center space-x-3 p-2 bg-white rounded shadow-sm hover:bg-blue-50 transition-colors">
                     <Calendar className="w-5 h-5 text-yellow-400" />
                     <div>
                       <p className="text-sm text-gray-500">Joined</p>
-                      <p className="font-semibold">{new Date(user.joinedDate).toLocaleDateString()}</p>
+                      <p className="font-semibold">{new Date(user.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
                 )}
