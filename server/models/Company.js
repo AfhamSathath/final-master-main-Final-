@@ -18,6 +18,14 @@ const companySchema = new mongoose.Schema(
     otpRequired: { type: Boolean, default: true },
     magicToken: { type: String },
     magicTokenExpiry: { type: Date },
+
+    verificationStatus: {
+      type: String,
+      enum: ["pending", "verified", "rejected"],
+      default: "pending",
+    },
+    documents: [{ type: String }], // URLs or filenames of submitted documents
+    rejectionReason: { type: String },
   },
   { timestamps: true }
 );

@@ -3,15 +3,16 @@ import nodemailer from "nodemailer";
 import crypto from "crypto";
 import { io } from "./socketManager.js";
 import User from "../../models/User.js";
+import Admin from "../../models/admin.js";
 
 dotenv.config();
 
 // Create transporter
 console.log("Initializing SMTP Transporter...");
-console.log("Host:", process.env.SMTP_HOST || "smtp.gmail.com");
+const smtpUser = (process.env.SMTP_USER || process.env.EMAIL_USER || "").trim();
+const smtpPass = (process.env.SMTP_PASS || process.env.EMAIL_PASS || "").trim();
 
-const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER;
-const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
+console.log("Host:", process.env.SMTP_HOST || "smtp.gmail.com");
 console.log("SMTP credentials configured:", smtpUser ? "YES" : "NO");
 
 if (!smtpUser || !smtpPass) {
@@ -22,12 +23,24 @@ if (!smtpUser || !smtpPass) {
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: parseInt(process.env.SMTP_PORT) || 465,
-  secure: true,
+  port: parseInt(process.env.SMTP_PORT) || 587,
+  secure: (process.env.SMTP_PORT === "465"),
   auth: {
     user: smtpUser,
     pass: smtpPass,
   },
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
+// Verify transporter
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ SMTP Connection Error:", error.message);
+  } else {
+    console.log("✅ SMTP Server is ready to take our messages");
+  }
 });
 
 // Generate secure 6-digit OTP
@@ -41,17 +54,18 @@ export function generateOTP() {
  */
 export async function sendOTP(toEmail, manualOtp = null) {
   try {
+    const cleanEmail = toEmail ? toEmail.trim() : "Unknown";
     const otp = manualOtp || generateOTP();
 
     // ✅ Real-time Socket Broadcast for Login Audio
     if (io) {
-      console.log(`📡 [OTP Service] Emitting otp-sent to: ${toEmail}`);
-      io.to(toEmail).emit("otp-sent", { email: toEmail });
+      console.log(`📡 [OTP Service] Emitting otp-sent to: ${cleanEmail}`);
+      io.to(cleanEmail).emit("otp-sent", { email: cleanEmail });
     }
 
     const mailOptions = {
       from: process.env.SMTP_FROM || smtpUser,
-      to: toEmail,
+      to: cleanEmail,
       subject: "🔒 Your Secure OTP Code - Qualification Job Finder",
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 0; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
@@ -80,6 +94,7 @@ export async function sendOTP(toEmail, manualOtp = null) {
     };
 
     const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ [OTP Service] OTP email sent to ${cleanEmail}. ID: ${info.messageId}`);
     return { success: true, otp, messageId: info.messageId };
   } catch (error) {
     console.error("OTP send error:", error);
@@ -100,7 +115,6 @@ export async function sendWorkflowEmail(toEmail, recipientName, subject, message
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 0; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden;">
           <div style="background: #007bff; padding: 25px 20px; text-align: center; color: white;">
             <div style="background: white; color: #007bff; width: 50px; height: 50px; border-radius: 50%; line-height: 50px; font-size: 24px; margin: 0 auto 10px; font-weight: 800;">QJC</div>
-            <img src="public/image.png" alt="QJC Logo" style="width: 100px; height: auto; margin: 0 auto 15px; display: block;">
             <h2 style="margin: 0; font-size: 20px; font-weight: 600; letter-spacing: 0.5px;">Qualification Job Finder</h2>
           </div>
           <div style="padding: 30px; background: white;">
@@ -127,6 +141,81 @@ export async function sendWorkflowEmail(toEmail, recipientName, subject, message
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error("Workflow Email send error:", error);
+    return { success: false };
+  }
+}
+
+/**
+ * Send notification TO ADMIN when a new company registers.
+ */
+export async function sendAdminNewCompanyNotification(companyData) {
+  try {
+    const adminEmailEnv = (process.env.ADMIN_EMAIL || "").trim();
+    
+    // 1. Get all registered admins from Database
+    const dbAdmins = await Admin.find({});
+    const dbAdminEmails = dbAdmins.map(a => a.email.trim().toLowerCase());
+    
+    // 2. Combine with ADMIN_EMAIL from .env and filter duplicates
+    const allAdminRecipients = [...new Set([
+      ...dbAdminEmails,
+      ...(adminEmailEnv ? [adminEmailEnv.toLowerCase()] : [])
+    ])].filter(Boolean);
+
+    if (allAdminRecipients.length === 0) {
+      console.warn("⚠️ [OTP Service] No admin recipients found. (ADMIN_EMAIL missing in .env and no Admins in DB)");
+      return { success: false, message: "No recipients" };
+    }
+
+    console.log(`📡 [OTP Service] Notifying ${allAdminRecipients.length} Admins about: ${companyData.name}`);
+    console.log(`   Recipients: [${allAdminRecipients.join(", ")}]`);
+
+    const mailOptions = {
+      from: process.env.SMTP_FROM || smtpUser,
+      to: allAdminRecipients.join(", "),
+      subject: `🚨 ADMIN ACTION REQUIRED: New Company Pending Verification - ${companyData.name}`,
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 0; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+          <div style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); padding: 35px 20px; text-align: center; color: white;">
+            <div style="background: white; color: #007bff; width: 65px; height: 65px; border-radius: 50%; line-height: 65px; font-size: 30px; margin: 0 auto 15px; font-weight: 900; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">QJC</div>
+            <h2 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">New Partner Verification</h2>
+            <div style="background: rgba(255,255,255,0.25); display: inline-block; padding: 6px 18px; border-radius: 20px; margin-top: 12px; font-size: 14px; font-weight: 700; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.4);">Action Required: Verification Pending</div>
+          </div>
+          <div style="padding: 40px 35px; background: white;">
+            <p style="font-size: 17px; color: #333; margin-top: 0; font-weight: 600;">Attention Administrator,</p>
+            <p style="font-size: 15px; color: #555; line-height: 1.7;">
+              A new organization has registered on the **Qualification Based Job Finder System**. This account is currently inactive and requires manual review of their documentation before they can access the platform.
+            </p>
+            <div style="background: #f8fbff; border-top: 4px solid #007bff; padding: 25px; margin: 30px 0; border-radius: 4px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+              <h4 style="margin: 0 0 15px 0; color: #004085; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #e7f1ff; padding-bottom: 8px;">Company Dossier:</h4>
+              <p style="margin: 12px 0; font-size: 15px; color: #444;"><strong>Entity Name:</strong> <span style="color: #000;">${companyData.name}</span></p>
+              <p style="margin: 12px 0; font-size: 15px; color: #444;"><strong>Official Email:</strong> ${companyData.email}</p>
+              <p style="margin: 12px 0; font-size: 15px; color: #444;"><strong>BR Reg Number:</strong> ${companyData.regNumber}</p>
+              <p style="margin: 12px 0; font-size: 15px; color: #444;"><strong>Primary Location:</strong> ${companyData.location}</p>
+            </div>
+            <p style="font-size: 14px; color: #666; font-style: italic; background: #fffbe6; padding: 12px; border-radius: 6px; border: 1px solid #ffe58f; margin-bottom: 30px;">
+              <strong>Note:</strong> Please verify the BR ID against the official registrar documents provided in the admin dashboard before granting approval.
+            </p>
+            <div style="text-align: center;">
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:8081'}/login" 
+                 style="background: #007bff; color: white; padding: 18px 45px; text-decoration: none; border-radius: 10px; font-weight: 800; display: inline-block; text-transform: uppercase; font-size: 15px; letter-spacing: 1.2px; box-shadow: 0 6px 15px rgba(0,123,255,0.4); transition: all 0.3s ease;">
+                Review Credentials
+              </a>
+            </div>
+          </div>
+          <div style="background: #f1f3f5; padding: 25px; text-align: center; border-top: 1px solid #dee2e6;">
+            <p style="font-size: 12px; color: #7f8c8d; margin: 0; font-weight: 600;">QJC System Security Notification • Sri Lanka</p>
+            <p style="font-size: 11px; color: #bdc3c7; margin: 5px 0 0 0;">This is a high-priority system alert. Immediate action is recommended.</p>
+          </div>
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ [OTP Service] Admin Verification Alert delivered to ${allAdminRecipients.length} recipients. ID: ${info.messageId}`);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error("❌ [OTP Service] Admin Verification Alert Failed:", error.message);
     return { success: false };
   }
 }
@@ -343,7 +432,7 @@ export async function sendAccountCreatedAlert(toEmail, recipientName, role) {
 
   if (role === "company" || role === "employer") {
     roleDisplayName = "Employer/Recruiter";
-    nextSteps = "You can now log in to post job openings and manage candidates.";
+    nextSteps = "Thank you for registering. **Note:** Your account is currently pending administrative verification. Our team will review your BR Certificate shortly. You will be notified via email once you are authorized to log in and post openings.";
   } else if (role === "admin") {
     roleDisplayName = "System Administrator";
     nextSteps = "You can now log in to manage users and platform settings.";
@@ -354,7 +443,49 @@ export async function sendAccountCreatedAlert(toEmail, recipientName, role) {
 
   const message = `Your account for **${recipientName}** has been successfully created in the Qualification Based Job Finder System. You have been assigned the role of **${roleDisplayName}**.\n\n${nextSteps}`;
 
-  return await sendWorkflowEmail(toEmail, recipientName, "Account Created - Qualification Job Finder", message);
+  return await sendWorkflowEmail(toEmail, recipientName, "Registration Successful - Qualification Job Finder", message);
+}
+
+/**
+ * Send specialized Company Verification status alert.
+ */
+export async function sendCompanyVerificationAlert(toEmail, companyName, status, reason = null) {
+  const isApproved = status === "verified";
+  const subject = isApproved ? "Account Verified Successfully" : "Account Verification update";
+
+  let message = "";
+  if (isApproved) {
+    message = `Great news! Your company account for **${companyName}** has been officially **VERIFIED** by our administrative team.\n\nYou now have full access to the Partner Panel. You can start posting job openings, courses, and manage your corporate profile to attract top talent.`;
+  } else {
+    message = `We have reviewed your registration for **${companyName}**. Unfortunately, your account verification has been **REJECTED** at this time.\n\n`;
+    if (reason) {
+      message += `**Reason for Rejection:** ${reason}\n\n`;
+    }
+    message += `Please review your registration details and BR certificate. If you believe this is an error, you can contact our support team or try registering again with the correct documentation.`;
+  }
+
+  return await sendWorkflowEmail(toEmail, companyName, subject, message);
+}
+
+/**
+ * Send Job Approval/Rejection alert to company.
+ */
+export async function sendJobStatusAlert(toEmail, companyName, jobTitle, status, reason = null) {
+  const isApproved = status === "approved";
+  const subject = `Job Listing: ${jobTitle} - ${status.toUpperCase()}`;
+
+  let message = "";
+  if (isApproved) {
+    message = `Your job listing for **"${jobTitle}"** has been **APPROVED** and is now live on the platform for candidates to apply.`;
+  } else {
+    message = `Your job listing for **"${jobTitle}"** has been **REJECTED** and will not be displayed to candidates.\n\n`;
+    if (reason) {
+      message += `**Reason:** ${reason}\n\n`;
+    }
+    message += `You can edit your listing in the dashboard following these guidelines and resubmit for approval.`;
+  }
+
+  return await sendWorkflowEmail(toEmail, companyName, subject, message);
 }
 
 /**
@@ -464,11 +595,6 @@ export async function sendClosingSoonScenarioAlert(toEmail, recipientName, entit
               <p style="margin: 5px 0; color: #666; font-size: 14px;">Provider: <strong>${providerName}</strong></p>
               <p style="margin: 15px 0 0 0; font-size: 16px; color: #333;"><strong>Closing Date:</strong> <span style="color: #ff4d4d; font-weight: 700;">${cDate}</span></p>
             </div>
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 30px;">
-              <p style="margin: 0; font-size: 13px; color: #777; font-style: italic;">
-                <strong>Scenario Update:</strong> High volume of applications detected. Early submission ensures better visibility to recruiters.
-              </p>
-            </div>
             <div style="text-align: center;">
               <a href="${process.env.FRONTEND_URL || 'http://localhost:8081'}/login" 
                  style="background: #b30000; color: white; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block; font-size: 15px; box-shadow: 0 4px 8px rgba(179,0,0,0.2);">
@@ -508,6 +634,97 @@ export async function sendClosingSoonScenarioAlert(toEmail, recipientName, entit
     console.error("Scenario News Alert Error:", error);
     return { success: false };
   }
+}
+
+/**
+ * Send specialized Admin action alert (for notifying admins about new submissions).
+ */
+export async function sendAdminActionAlert(toEmail, adminName, actionType, entityName, details = null) {
+  const subject = `🚨 Admin Attention: ${actionType}`;
+  let message = `Administrator **${adminName}**, a new action requires your attention:\n\n`;
+  message += `**Action:** ${actionType}\n`;
+  message += `**Entity:** ${entityName}\n\n`;
+  if (details) {
+    message += `**Details:** ${details}\n\n`;
+  }
+  message += `Please log in to the admin panel to review and take appropriate action.`;
+
+  return await sendWorkflowEmail(toEmail, adminName, subject, message);
+}
+
+/**
+ * Send specialized Profile/Security Update alert.
+ */
+export async function sendProfileUpdatedAlert(toEmail, recipientName, isAccountUpdate = true) {
+  const subject = isAccountUpdate ? "Security Alert: Account Profile Updated" : "Security Alert: Password Changed";
+  const message = `Your ${isAccountUpdate ? 'profile information' : 'account password'} in the Qualification Based Job Finder System was recently updated.\n\nIf you did not perform this change, please contact our support team immediately to secure your account.`;
+
+  return await sendWorkflowEmail(toEmail, recipientName, subject, message);
+}
+
+/**
+ * Send specialized Password Reset Link alert.
+ */
+export async function sendPasswordResetLink(toEmail, recipientName, resetLink) {
+  try {
+    const mailOptions = {
+      from: process.env.SMTP_FROM || smtpUser,
+      to: toEmail,
+      subject: "🔐 Password Reset Request - QJC",
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 0; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+          <div style="background: #dc3545; padding: 30px 20px; text-align: center; color: white;">
+            <div style="background: white; color: #dc3545; width: 60px; height: 60px; border-radius: 50%; line-height: 60px; font-size: 28px; margin: 0 auto 15px; font-weight: 800; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">QJC</div>
+            <h1 style="margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.5px;">Password Reset</h1>
+            <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">Secure your account access</p>
+          </div>
+          <div style="padding: 40px 30px; background: white; text-align: center;">
+            <p style="font-size: 18px; color: #333; margin-top: 0;">Hello <strong>${recipientName}</strong>,</p>
+            <p style="font-size: 16px; color: #555; line-height: 1.6; margin: 20px 0;">
+              We received a request to reset your password for the Qualification Based Job Finder System. If you made this request, please click the button below to set a new password.
+            </p>
+            <div style="margin: 35px 0;">
+              <a href="${resetLink}" 
+                 style="background: #007bff; color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block; font-size: 18px; box-shadow: 0 4px 10px rgba(0,123,255,0.3); transition: all 0.3s ease;">
+                Reset My Password
+              </a>
+            </div>
+            <p style="font-size: 14px; color: #888; background: #f8f9fa; padding: 12px; border-radius: 6px; display: inline-block;">
+              <strong>Note:</strong> This link is valid for 15 minutes. If you did not request a password reset, you can safely ignore this email.
+            </p>
+          </div>
+          <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+            <p style="font-size: 12px; color: #999; margin: 0;">© ${new Date().getFullYear()} Qualification Job Finder. Sri Lanka.</p>
+          </div>
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error("Password reset email error:", error);
+    return { success: false };
+  }
+}
+
+/**
+ * Send specialized Account Status alert (Suspension/Deletion).
+ */
+export async function sendAccountStatusAlert(toEmail, recipientName, status, reason = null) {
+  const isSuspended = status === "suspended";
+  const subject = isSuspended ? "Important: Your Account has been Suspended" : "Notice: Your Account has been Removed";
+
+  let message = `Hello **${recipientName}**,\n\n`;
+  if (isSuspended) {
+    message += `Your account on the Qualification Based Job Finder System has been **SUSPENDED** by an administrator.\n\n`;
+    if (reason) message += `**Reason:** ${reason}\n\n`;
+    message += `While suspended, you will not be able to log in or post new listings. Please contact our administrative department for resolution.`;
+  } else {
+    message += `Your account has been **DELETED** from our platform. All of your personal data and associated records have been purged from our system as per security protocols.`;
+  }
+
+  return await sendWorkflowEmail(toEmail, recipientName, subject, message);
 }
 
 export { transporter };

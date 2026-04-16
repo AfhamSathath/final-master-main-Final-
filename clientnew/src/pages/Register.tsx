@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, ArrowRight, ShieldCheck } from "lucide-react";
 import { z } from "zod";
 import {
   QUALIFICATION_OPTIONS,
@@ -20,7 +20,7 @@ const API_BASE = "http://localhost:5000";
 // ------------------- VALIDATION (zod) -------------------
 const registerValidationSchema = z
   .object({
-    name: z.string().min(2, "Name is required"),
+    name: z.string().min(2, "Name or Company Name is required"),
     email: z.string().email("Invalid email address"),
     phone: z.string().regex(/^\d{9,10}$/, "Phone number must be 9–10 digits"),
     password: z
@@ -38,13 +38,25 @@ const registerValidationSchema = z
       z.literal("")
     ]).optional(),
     qualification: z.array(z.string()).optional(),
-    district: z.string().optional(),
+    district: z.string().min(1, "Please select your preferred district"),
     userType: z.enum(["user", "company"]),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
   })
+  .refine(
+    (data) => {
+      if (data.userType === "company") {
+        return !!data.regNumber && data.regNumber.trim().length > 0;
+      }
+      return true;
+    },
+    {
+      message: "Registration number is required for companies",
+      path: ["regNumber"],
+    }
+  )
   .refine(
     (data) => {
       if (data.userType === "user") {
@@ -70,18 +82,6 @@ const registerValidationSchema = z
     {
       message: "Please select a valid qualification",
       path: ["qualification"],
-    }
-  )
-  .refine(
-    (data) => {
-      if (data.userType === "user") {
-        return !!data.district && SRI_LANKA_DISTRICTS.includes(data.district);
-      }
-      return true;
-    },
-    {
-      message: "Please select your preferred district",
-      path: ["district"],
     }
   )
   .refine(
@@ -141,6 +141,8 @@ const Register: React.FC = () => {
   const [enteredOtp, setEnteredOtp] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isRegistrationComplete, setIsRegistrationComplete] = useState(false);
+  const [brFile, setBrFile] = useState<File | null>(null);
 
   const qualificationOptions =
     formData.qualificationCategory &&
@@ -168,44 +170,38 @@ const Register: React.FC = () => {
     }
 
     try {
-      const toastId = toast.loading("🔍 Verifying Sri Lankan company keywords...");
+      const toastId = toast.loading("🔍 Verifying company with database...");
 
-      const sriLankanKeywords = [
-        "lanka",
-        "ceylon",
-        "serendib",
-        "holdings",
-        "enterprises",
-        "exports",
-        "imports",
-        "group",
-        "solutions",
-        "technologies",
-        "industries",
-        "traders",
-        "pvt ltd",
-        "private limited",
-      ];
-
-      const name = formData.name.toLowerCase();
-      const foundKeyword = sriLankanKeywords.find((kw) =>
-        name.includes(kw.toLowerCase())
-      );
+      const response = await axios.post(`${API_BASE}/api/verify-company`, {
+        companyName: formData.name,
+        regNumber: formData.regNumber,
+        email: formData.email,
+        phone: formData.phone,
+        checkDuplicate: true
+      });
 
       toast.dismiss(toastId);
 
-      if (foundKeyword) {
-        toast.success(`✅ Verified: contains '${foundKeyword}'`);
-        setVerified(true);
-        setConfidence(0.95);
-      } else {
-        toast.error("❌ Company name does not match Sri Lankan business keywords.");
+      if (response.data.duplicate) {
+        toast.error(`❌ ${response.data.reason}`);
         setVerified(false);
-        setConfidence(0.3);
+        setConfidence(0);
+        return;
       }
-    } catch (err) {
+
+      if (response.data.verified) {
+        toast.success(`✅ ${response.data.reason}`);
+        setVerified(true);
+        setConfidence(response.data.confidence);
+      } else {
+        toast.error(`❌ ${response.data.reason}`);
+        setVerified(false);
+        setConfidence(response.data.confidence);
+      }
+    } catch (err: any) {
       toast.dismiss();
-      toast.error("❌ Verification failed. Please try again.");
+      const errorMsg = err.response?.data?.reason || "Verification failed. Please try again.";
+      toast.error(`❌ ${errorMsg}`);
       console.error("Verification error:", err);
       setVerified(false);
       setConfidence(null);
@@ -354,23 +350,36 @@ const Register: React.FC = () => {
 
       // Step 2: Register user or company
       if (formData.userType === "company") {
-        const response = await axios.post(`${API_BASE}/api/companies`, {
-          name: formData.name,
-          location: formData.address || formData.district || "Sri Lanka",
-          regNumber: formData.regNumber || undefined,
-          email: formData.email,
-          contactNumber: formData.phone,
-          password: formData.password,
+        if (!brFile) {
+          toast.error("❌ Please upload your BR certificate.");
+          setLoading(false);
+          return;
+        }
+
+        const data = new FormData();
+        data.append("name", formData.name);
+        data.append("location", formData.district || "Sri Lanka");
+        data.append("address", formData.address || "");
+        data.append("regNumber", formData.regNumber || "");
+        data.append("email", formData.email);
+        data.append("contactNumber", formData.phone);
+        data.append("password", formData.password);
+        data.append("document", brFile);
+
+        const response = await axios.post(`${API_BASE}/api/companies`, data, {
+          headers: { "Content-Type": "multipart/form-data" }
         });
 
         if (response.status === 201) {
-          toast.success("🏢 Company registered successfully!");
-          setTimeout(() => navigate("/login"), 1500);
+          toast.success("🏢 Company registered successfully!", { duration: 5000 });
+          setOtpSent(false); // Reset to show registration success state
+          setIsRegistrationComplete(true);
           return;
         }
       } else {
         const response = await axios.post(`${API_BASE}/api/users`, {
           name: formData.name,
+          role: "user",
           email: formData.email,
           contactNumber: formData.phone,
           location: formData.district,
@@ -401,8 +410,42 @@ const Register: React.FC = () => {
   return (
     <>
       <Toaster position="top-center" reverseOrder={false} />
-
-      {!otpSent ? (
+ 
+      {isRegistrationComplete ? (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 to-blue-200 p-4 font-sans">
+          <div className="w-full max-w-lg bg-white p-10 rounded-3xl shadow-2xl border border-gray-100 text-center animate-in zoom-in duration-300">
+            <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
+              <CheckCircle className="w-12 h-12 text-green-600" />
+            </div>
+            <h2 className="text-3xl font-black text-slate-800 mb-4 tracking-tight">Registration Received!</h2>
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-8 text-left shadow-sm">
+              <div className="flex gap-4">
+                <ShieldCheck className="w-8 h-8 text-amber-500 shrink-0" />
+                <div>
+                  <h4 className="font-bold text-amber-900 mb-1">Account Pending Verification</h4>
+                  <p className="text-amber-800 text-sm leading-relaxed">
+                    Thank you for joining the QJC network. To ensure platform integrity, our administrators must manually verify your business credentials.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <p className="text-slate-600 mb-10 text-lg">
+              You will receive an email notification once your account has been reviewed. 
+              <span className="block font-bold mt-2 text-slate-800 italic underline decoration-red-400 decoration-2">
+                Note: You will not be able to login until this verification is complete.
+              </span>
+            </p>
+            
+            <button
+              onClick={() => navigate("/login")}
+              className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-slate-800 transition shadow-lg shadow-slate-900/10 active:scale-95"
+            >
+              Back to Login <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      ) : !otpSent ? (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-300 p-4">
           <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-2xl border border-gray-200">
             <h2 className="text-3xl font-bold text-center text-blue-700 mb-6">
@@ -447,13 +490,14 @@ const Register: React.FC = () => {
                 <>
                   <div>
                     <label className="block text-sm font-semibold mb-1 text-gray-700">
-                      Registration Number (optional)
+                      Registration Number
                     </label>
                     <input
                       type="text"
                       name="regNumber"
                       value={formData.regNumber}
                       onChange={handleChange}
+                      required
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-400"
                       placeholder="e.g., PV/1234/2022"
                     />
@@ -621,18 +665,35 @@ const Register: React.FC = () => {
 
               {/* Address */}
               {formData.userType === "company" && (
-                <div>
-                  <label className="block text-sm font-semibold mb-1 text-gray-700">
-                    Address
-                  </label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-400"
-                    placeholder="Enter company address"
-                  />
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-1 text-gray-700">
+                      Address
+                    </label>
+                    <input
+                      type="text"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleChange}
+                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-400"
+                      placeholder="Enter company address"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-1 text-gray-700">
+                      Business Registration (BR) Certificate
+                    </label>
+                    <input
+                      type="file"
+                      id="br-cert"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      required
+                      onChange={(e) => setBrFile(e.target.files?.[0] || null)}
+                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    <p className="text-[10px] text-gray-500 mt-1 italic">Please upload a clear copy of your registration certificate (.pdf, .jpg, .png)</p>
+                  </div>
                 </div>
               )}
 

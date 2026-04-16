@@ -96,29 +96,44 @@ router.post("/", async (req, res) => {
 
     // STEP 4: Check for duplicates (optional)
     if (checkDuplicate) {
-      const queryConditions = [];
+      const companyQueryConditions = [];
+      if (name && name.trim()) companyQueryConditions.push({ name: name.trim() });
+      if (email && email.trim()) companyQueryConditions.push({ email: email.trim().toLowerCase() });
+      if (regNumber && regNumber.trim()) companyQueryConditions.push({ regNumber: regNumber.trim() });
+      if (phone && phone.trim()) companyQueryConditions.push({ contactNumber: phone.trim() });
 
-      if (name) queryConditions.push({ name });
-      if (email) queryConditions.push({ email });
-      if (regNumber) queryConditions.push({ regNumber });
-      if (phone) queryConditions.push({ contactNumber: phone });
+      let existingCompany = null;
+      if (companyQueryConditions.length > 0) {
+        existingCompany = await Company.findOne({ $or: companyQueryConditions });
+      }
 
-      // Check duplicates in Company collection
-      const existingCompany = await Company.findOne({
-        $or: queryConditions,
-      });
+      const userQueryConditions = [];
+      if (email && email.trim()) userQueryConditions.push({ email: email.trim().toLowerCase() });
+      if (phone && phone.trim()) userQueryConditions.push({ contactNumber: phone.trim() });
 
-      // Check duplicates in User collection (shared email/phone)
-      const existingUser = await User.findOne({
-        $or: [{ email }, { contactNumber: phone }],
-      });
+      let existingUser = null;
+      if (userQueryConditions.length > 0) {
+        existingUser = await User.findOne({ $or: userQueryConditions });
+      }
 
-      if (existingCompany || existingUser) {
-        return res.status(409).json({
-          verified: true,
+      // Check exactly what is duplicated
+      let duplicateField = "";
+      if (existingCompany) {
+        if (existingCompany.name === name.trim()) duplicateField = "Company Name";
+        else if (existingCompany.email === email.trim().toLowerCase()) duplicateField = "Email Address";
+        else if (existingCompany.regNumber === regNumber.trim()) duplicateField = "Registration Number";
+        else if (existingCompany.contactNumber === phone.trim()) duplicateField = "Phone Number";
+      } else if (existingUser) {
+        if (existingUser.email === email.trim().toLowerCase()) duplicateField = "Email Address";
+        else if (existingUser.contactNumber === phone.trim()) duplicateField = "Phone Number";
+      }
+
+      if (duplicateField) {
+        return res.status(200).json({
+          verified: false,
           confidence,
           duplicate: true,
-          reason: "Email, phone number, or company already registered.",
+          reason: `⚠️ This ${duplicateField} is already registered in our system. Please use unique details.`,
         });
       }
     }

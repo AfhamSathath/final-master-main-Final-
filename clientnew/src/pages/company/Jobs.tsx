@@ -6,7 +6,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { Edit, Trash2, PlusCircle, X, Building2, Calendar, GraduationCap } from "lucide-react";
 import { getUser } from "@/utils/Auth";
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
-import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
+import { QUALIFICATION_OPTIONS, ALL_QUALIFICATION_OPTIONS } from "@/constants/qualifications";
 import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 
 // ================== HELPER FUNCTION ==================
@@ -49,6 +49,15 @@ export type Job = {
   positionType?: "full-time" | "part-time" | "internship";
   paymentType?: "paid" | "unpaid";
   location?: string;
+  approvalStatus?: "pending" | "approved" | "rejected";
+  rejectionReason?: string;
+};
+
+type CompanyProfile = {
+  _id: string;
+  name: string;
+  verificationStatus: "pending" | "verified" | "rejected";
+  rejectionReason?: string;
 };
 
 type NewJob = Omit<Job, "_id">;
@@ -78,19 +87,42 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 // ================== API ==================
 const fetchJobs = async (): Promise<Job[]> => {
-  const res = await axios.get(API_BASE);
+  const token = localStorage.getItem("token");
+  const res = await axios.get(API_BASE, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
   return res.data;
 };
+
+const fetchProfile = async (): Promise<CompanyProfile> => {
+    const token = localStorage.getItem("token");
+    const res = await axios.get("http://localhost:5000/api/companies/me/profile", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return res.data;
+  };
+
 const createJob = async (newJob: NewJob) => {
-  const res = await axios.post(API_BASE, newJob);
+  const token = localStorage.getItem("token");
+  const res = await axios.post(API_BASE, newJob, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
   return res.data;
 };
+
 const updateJob = async (updatedJob: Job) => {
-  const res = await axios.put(`${API_BASE}/${updatedJob._id}`, updatedJob);
+  const token = localStorage.getItem("token");
+  const res = await axios.put(`${API_BASE}/${updatedJob._id}`, updatedJob, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
   return res.data;
 };
+
 const deleteJob = async (id: string) => {
-  await axios.delete(`${API_BASE}/${id}`);
+  const token = localStorage.getItem("token");
+  await axios.delete(`${API_BASE}/${id}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
 };
 
 // ================== COMPONENT ==================
@@ -112,6 +144,7 @@ const CompanyJobsPage: React.FC = () => {
     positionType: "full-time",
     paymentType: "paid",
     location: "",
+    approvalStatus: "pending",
   });
   const [filterCategory, setFilterCategory] = useState("");
   const [filterPositionType, setFilterPositionType] = useState("");
@@ -128,6 +161,13 @@ const CompanyJobsPage: React.FC = () => {
     queryKey: ["jobs"],
     queryFn: fetchJobs,
   });
+
+  const { data: profile } = useQuery<CompanyProfile>({
+    queryKey: ["profile"],
+    queryFn: fetchProfile,
+  });
+
+  const isVerified = profile?.verificationStatus === "verified";
 
   const createMutation = useMutation({
     mutationFn: createJob,
@@ -251,7 +291,7 @@ const CompanyJobsPage: React.FC = () => {
           </select>
           <div className="min-w-[200px]">
             <MultiSelectDropdown
-              options={QUALIFICATION_OPTIONS}
+              options={ALL_QUALIFICATION_OPTIONS}
               selectedValues={filterQualification}
               onChange={setFilterQualification}
               placeholder="All Qualifications"
@@ -261,6 +301,10 @@ const CompanyJobsPage: React.FC = () => {
 
         <button
           onClick={() => {
+            if (!isVerified) {
+              toast.error("⚠️ Your account must be verified before you can post jobs.");
+              return;
+            }
             setShowForm(true);
             setEditingJob(null);
             setFormData({
@@ -273,13 +317,44 @@ const CompanyJobsPage: React.FC = () => {
               category: "",
               positionType: "full-time",
               paymentType: "paid",
+              approvalStatus: "pending",
             });
           }}
-          className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-3 rounded-xl font-medium shadow-md hover:shadow-lg flex items-center gap-2 transition-transform hover:scale-105"
+          disabled={!isVerified}
+          className={`${
+            isVerified 
+            ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg transition-transform hover:scale-105" 
+            : "bg-gray-400 cursor-not-allowed opacity-70"
+          } text-white px-5 py-3 rounded-xl font-medium shadow-md flex items-center gap-2`}
         >
           <PlusCircle className="w-5 h-5" /> Add Job
         </button>
       </div>
+
+      {/* Verification Warning */}
+      {!isVerified && profile && (
+        <div className="max-w-5xl mx-auto mb-8 bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg shadow-sm">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-amber-800">
+                Account Verification Required
+              </h3>
+              <div className="mt-2 text-sm text-amber-700">
+                <p>
+                  {profile.verificationStatus === "pending" 
+                    ? "Your account is currently waiting for admin verification. You can view your jobs once they are approved, but you cannot post new ones yet."
+                    : `Your account verification was rejected. Reason: ${profile.rejectionReason || "None provided"}. Please contact support.`}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Jobs Grid */}
       {filteredJobs.length === 0 ? (
@@ -347,6 +422,21 @@ const CompanyJobsPage: React.FC = () => {
                     Close: {job.closeDate || "N/A"}
                   </span>
                 </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase ${
+                    job.approvalStatus === "approved" ? "bg-green-100 text-green-700" :
+                    job.approvalStatus === "rejected" ? "bg-red-100 text-red-700" :
+                    "bg-amber-100 text-amber-700"
+                  }`}>
+                    {job.approvalStatus}
+                  </span>
+                  {job.approvalStatus === "rejected" && job.rejectionReason && (
+                    <span className="text-[10px] text-red-500 italic truncate max-w-[150px]" title={job.rejectionReason}>
+                      Reason: {job.rejectionReason}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* ✅ Linkify makes URLs clickable */}
@@ -368,6 +458,8 @@ const CompanyJobsPage: React.FC = () => {
                       category: job.category,
                       positionType: job.positionType || "full-time",
                       paymentType: job.paymentType || "paid",
+                      location: job.location || "",
+                      approvalStatus: job.approvalStatus,
                     });
                     setShowForm(true);
                   }}
@@ -419,7 +511,7 @@ const CompanyJobsPage: React.FC = () => {
               />
               <div className="w-full">
                 <MultiSelectDropdown
-                  options={QUALIFICATION_OPTIONS}
+                  options={ALL_QUALIFICATION_OPTIONS}
                   selectedValues={formData.qualification as string[]}
                   onChange={(selected: string[]) => setFormData({ ...formData, qualification: selected })}
                   placeholder="Select Qualification(s)"

@@ -93,6 +93,15 @@ const AdminDashboard: React.FC = () => {
             </NavLink>
             
             <NavLink
+              to="/admin-dashboard/companies"
+              className={({ isActive }) =>
+                (isActive ? activeClass : inactiveClass) + " p-2 rounded"
+              }
+            >
+              {isOpen ? "Manage Companies" : "🏢"}
+            </NavLink>
+
+            <NavLink
               to="/admin-dashboard/jobs"
               className={({ isActive }) =>
                 (isActive ? activeClass : inactiveClass) + " p-2 rounded"
@@ -107,6 +116,15 @@ const AdminDashboard: React.FC = () => {
               }
             >
               {isOpen ? "Manage Courses" : "📚"}
+            </NavLink>
+
+            <NavLink
+              to="/admin-dashboard/reports"
+              className={({ isActive }) =>
+                (isActive ? activeClass : inactiveClass) + " p-2 rounded"
+              }
+            >
+              {isOpen ? "Reports & Logs" : "📊"}
             </NavLink>
 
             <button

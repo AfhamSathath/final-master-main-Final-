@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
-import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
+import { QUALIFICATION_OPTIONS, ALL_QUALIFICATION_OPTIONS } from "@/constants/qualifications";
 import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 import {
   Edit,
@@ -159,6 +159,22 @@ const AdminCoursesPage: React.FC = () => {
     onError: () => toast.error("❌ Failed to delete course"),
   });
 
+  const broadcastMutation = useMutation({
+    mutationFn: async ({ title, message }: { title: string; message: string }) => {
+      return axios.post("http://localhost:5000/api/admins/broadcast", { title, message });
+    },
+    onSuccess: () => toast.success("📢 Broadcast sent to all users!"),
+    onError: () => toast.error("❌ Failed to send broadcast"),
+  });
+
+  const handleBroadcast = () => {
+      const title = window.prompt("Enter Notification Title:", "New Course Category Added!");
+      const message = window.prompt("Enter Notification Message:", "Check out our newest educational categories available now.");
+      if (title && message) {
+          broadcastMutation.mutate({ title, message });
+      }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.institution) {
@@ -193,21 +209,28 @@ const AdminCoursesPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 p-10 dark:from-gray-900 dark:to-gray-800">
       <Toaster position="top-center" />
-      <h1 className="text-4xl font-bold text-center mb-10 text-blue-700 dark:text-blue-300 drop-shadow-sm">
-        🧭 Admin Courses Dashboard
-      </h1>
+      <div className="flex justify-between items-center max-w-6xl mx-auto mb-10">
+          <h1 className="text-4xl font-black text-blue-900 dark:text-blue-300 drop-shadow-sm">
+            🧭 Courses Management
+          </h1>
+          <button 
+            onClick={handleBroadcast}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700 shadow-lg transition transform hover:scale-105"
+          >
+              📡 Broadcast Alert
+          </button>
+      </div>
 
       {/* Filter & Add */}
-      <div className="flex flex-col lg:flex-row gap-3 justify-between max-w-5xl mx-auto mb-8">
-        <div className="flex flex-wrap gap-3">
+      <div className="flex flex-col lg:flex-row gap-3 justify-between max-w-6xl mx-auto mb-8 bg-white/50 backdrop-blur p-4 rounded-2xl shadow-sm border border-white">
+        <div className="flex flex-wrap gap-3 flex-1">
           <input
             type="text"
-            placeholder="🔍 Search by name/institution"
+            placeholder="🔍 Search name/institution"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="border rounded-lg p-3 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-400"
+            className="border rounded-lg p-3 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-400 flex-1"
           />
-
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
@@ -218,46 +241,6 @@ const AdminCoursesPage: React.FC = () => {
               <option key={cat}>{cat}</option>
             ))}
           </select>
-
-          <select
-            value={filterCourseType}
-            onChange={(e) => setFilterCourseType(e.target.value)}
-            className="border rounded-lg p-3 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-400"
-          >
-            <option value="">All Course Types</option>
-            {COURSE_TYPE_OPTIONS.map((type) => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-          <select
-            value={filterLocation}
-            onChange={(e) => setFilterLocation(e.target.value)}
-            className="border rounded-lg p-3 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-400"
-          >
-            <option value="">All Districts</option>
-            {SRI_LANKA_DISTRICTS.map((district) => (
-              <option key={district} value={district}>{district}</option>
-            ))}
-          </select>
-
-          <select
-            value={filterPaymentType}
-            onChange={(e) => setFilterPaymentType(e.target.value)}
-            className="border rounded-lg p-3 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-400"
-          >
-            <option value="">All Payment Types</option>
-            {PAYMENT_TYPE_OPTIONS.map((type) => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-          <div className="min-w-[200px]">
-            <MultiSelectDropdown
-              options={QUALIFICATION_OPTIONS}
-              selectedValues={filterQualification}
-              onChange={setFilterQualification}
-              placeholder="All Qualifications"
-            />
-          </div>
         </div>
         <button
           onClick={() => {
@@ -274,7 +257,7 @@ const AdminCoursesPage: React.FC = () => {
               paymentType: "paid",
             });
           }}
-          className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-3 rounded-xl font-medium shadow-md hover:shadow-lg flex items-center gap-2 transition-transform hover:scale-105"
+          className="bg-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-blue-800 flex items-center gap-2 transition"
         >
           <PlusCircle className="w-5 h-5" /> Add Course
         </button>
@@ -328,8 +311,8 @@ const AdminCoursesPage: React.FC = () => {
                 </div>
                 {course.location && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-100 px-2 py-1 rounded-md font-medium">
-                      Location: {course.location}
+                    <span className="text-sm bg-purple-50 dark:bg-purple-900 text-purple-800 dark:text-purple-100 px-2 py-1 rounded-md font-medium">
+                      District: {course.location}
                     </span>
                   </div>
                 )}
@@ -426,7 +409,7 @@ const AdminCoursesPage: React.FC = () => {
 
               <div className="w-full">
                 <MultiSelectDropdown
-                  options={QUALIFICATION_OPTIONS}
+                  options={ALL_QUALIFICATION_OPTIONS}
                   selectedValues={formData.qualification as string[]}
                   onChange={(selected: string[]) => setFormData({ ...formData, qualification: selected })}
                   placeholder="Select Qualification(s)"

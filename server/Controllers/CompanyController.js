@@ -1,7 +1,7 @@
 import Company from "../models/Company.js";
 import bcrypt from "bcryptjs";
 import generateToken from "../src/utils/generateToken.js";
-import { sendWorkflowEmail } from "../src/utils/otpService.js";
+import { sendWorkflowEmail, sendAdminNewCompanyNotification, sendProfileUpdatedAlert } from "../src/utils/otpService.js";
 
 
 import * as fs from "fs";
@@ -45,101 +45,109 @@ function safeUnlink(filePath) {
 }
 
 // ================== CREATE COMPANY ==================
-export const createCompany = [
-  upload.single("logo"), // multer middleware to accept 'logo'
-  async (req, res) => {
-    try {
-      const { name, location, email, contactNumber, regNumber, password } = req.body;
+export const createCompany = async (req, res) => {
+  try {
+    const { name, location, email, contactNumber, regNumber, password, address } = req.body;
 
-      // basic required fields check
-      if (!name || !email || !contactNumber || !regNumber || !password || !location) {
-        // cleanup uploaded file if any
-        if (req.file?.path) safeUnlink(req.file.path);
-        return res.status(400).json({ message: "Please provide all required fields" });
-      }
-
-      const duplicateCompany = await Company.findOne({
-        $or: [
-          { email },
-          { contactNumber },
-          { regNumber },
-          { name },
-        ],
-      });
-      if (duplicateCompany) {
-        if (req.file?.path) safeUnlink(req.file.path);
-        return res.status(400).json({
-          message:
-            "A company with this email, phone, registration number, or name already exists.",
-        });
-      }
-
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      let logoHash = null;
-      let logoFile = null;
-
-      if (req.file && req.file.path) {
-        try {
-          logoFile = req.file.filename; // stored filename by multer
-          logoHash = await computeHash(req.file.path);
-        } catch (err) {
-          // if hashing fails, cleanup file and return error
-          safeUnlink(req.file.path);
-          console.error("Error processing logo:", err);
-          return res.status(500).json({ message: "Error processing uploaded logo" });
-        } finally {
-          // remove temp file after hashing (we're storing only hash + filename)
-          if (req.file?.path) safeUnlink(req.file.path);
-        }
-      }
-
-      const newCompany = new Company({
-        name,
-        location,
-        email,
-        contactNumber,
-        regNumber,
-        password: hashedPassword,
-        logo: logoFile,   // optional - if you want to persist file path elsewhere adjust logic
-        logoHash,
-        role: "company",
-      });
-
-      await newCompany.save();
-
-      // ✅ Send Confirmation Email (Branded for QJC)
-      await sendWorkflowEmail(
-        newCompany.email,
-        newCompany.name,
-        "Account Created - Qualification Job Finder",
-        `Your company account for **${newCompany.name}** has been successfully created in the Qualification Based Job Finder System. You have been assigned the role of **Employer/Recruiter**.\n\nYou can now log in to post job openings and manage candidates.`
-
-      );
-
-
-      res.status(201).json({
-
-        message: "Company created successfully",
-        company: {
-          _id: newCompany._id,
-          name: newCompany.name,
-          email: newCompany.email,
-          contactNumber: newCompany.contactNumber,
-          regNumber: newCompany.regNumber,
-          location: newCompany.location,
-          role: newCompany.role,
-          token: generateToken(newCompany._id, "company"),
-        },
-      });
-    } catch (error) {
-      console.error("Error creating company:", error);
-      // cleanup uploaded file if present (defensive)
-      if (req.file?.path) safeUnlink(req.file.path);
-      res.status(500).json({ message: "Error creating company", error: error.message });
+    // basic required fields check
+    if (!name || !email || !contactNumber || !regNumber || !password || !location) {
+      if (req.files?.logo?.[0]?.path) safeUnlink(req.files.logo[0].path);
+      if (req.files?.document?.[0]?.path) safeUnlink(req.files.document[0].path);
+      return res.status(400).json({ message: "Please provide all required fields" });
     }
-  },
-];
+
+    const duplicateCompany = await Company.findOne({
+      $or: [{ email }, { contactNumber }, { regNumber }, { name }],
+    });
+
+    if (duplicateCompany) {
+      if (req.files?.logo?.[0]?.path) safeUnlink(req.files.logo[0].path);
+      if (req.files?.document?.[0]?.path) safeUnlink(req.files.document[0].path);
+      return res.status(400).json({
+        message: "A company with this email, phone, registration number, or name already exists.",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    let logoHash = null;
+    let logoFile = null;
+    let brDocument = null;
+
+    // Process Logo
+    if (req.files?.logo?.[0]) {
+      const logo = req.files.logo[0];
+      try {
+        logoFile = logo.filename;
+        logoHash = await computeHash(logo.path);
+      } catch (err) {
+        console.error("Error processing logo:", err);
+      } finally {
+        // Not safe-unlinking because the system seems to use these files (static serving)
+        // Wait, the previous logic was unlinking after hash. 
+        // If we want to serve the files, we shouldn't unlink.
+        // Actually, let's keep it in the uploads folder.
+      }
+    }
+
+    // Process BR Document
+    if (req.files?.document?.[0]) {
+      brDocument = req.files.document[0].filename;
+    }
+
+    const newCompany = new Company({
+      name,
+      location,
+      address,
+      email,
+      contactNumber,
+      regNumber,
+      password: hashedPassword,
+      logo: logoFile,
+      logoHash,
+      documents: brDocument ? [brDocument] : [],
+      role: "company",
+      verificationStatus: "pending",
+    });
+
+    await newCompany.save();
+
+    // ✅ Send Confirmation Email
+    await sendWorkflowEmail(
+      newCompany.email,
+      newCompany.name,
+      "Account Created - Qualification Job Finder",
+      `Your company account for **${newCompany.name}** has been successfully created. \n\n**Next Steps:** Your account is currently pending administrative verification. Our team will review your BR Certificate and registration number. You will receive an email once your account has been approved.`
+    );
+
+    // ✅ Notify Admin about New Company Registration
+    await sendAdminNewCompanyNotification({
+      name: newCompany.name,
+      email: newCompany.email,
+      regNumber: newCompany.regNumber,
+      location: newCompany.location
+    }).catch(err => console.error("Failed to notify admin:", err));
+
+    res.status(201).json({
+      message: "Company created successfully",
+      company: {
+        _id: newCompany._id,
+        name: newCompany.name,
+        email: newCompany.email,
+        contactNumber: newCompany.contactNumber,
+        regNumber: newCompany.regNumber,
+        location: newCompany.location,
+        role: newCompany.role,
+        token: generateToken(newCompany._id, "company"),
+      },
+    });
+  } catch (error) {
+    console.error("Error creating company:", error);
+    if (req.files?.logo?.[0]?.path) safeUnlink(req.files.logo[0].path);
+    if (req.files?.document?.[0]?.path) safeUnlink(req.files.document[0].path);
+    res.status(500).json({ message: "Error creating company", error: error.message });
+  }
+};
 
 // ================== GET ALL COMPANIES ==================
 export const getCompanies = async (req, res) => {
@@ -183,13 +191,7 @@ export const updateCompany = async (req, res) => {
     if (!company) return res.status(404).json({ message: "Company not found" });
 
     // ✅ Send Update Notification (Security Alert)
-    await sendWorkflowEmail(
-      company.email,
-      company.name,
-      "Security Alert: Profile Updated",
-      "Your company profile in the Qualification Based Job Finder System was recently updated. If you did not authorize this change, please contact the support team immediately."
-
-    );
+    await sendProfileUpdatedAlert(company.email, company.name, true);
 
 
     res.status(200).json({ message: "Company updated successfully", company });
@@ -240,6 +242,9 @@ export const updateMyCompany = async (req, res) => {
     }).select("-password");
 
     if (!company) return res.status(404).json({ message: "Company not found" });
+
+    // ✅ Send Security Notification
+    await sendProfileUpdatedAlert(company.email, company.name, true);
 
     res.status(200).json({ message: "Company updated successfully", company });
   } catch (error) {

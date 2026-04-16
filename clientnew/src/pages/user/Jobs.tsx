@@ -7,7 +7,7 @@ import toast, { Toaster } from "react-hot-toast";
 import Linkify from "react-linkify";
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
 import { getUser } from "@/utils/Auth";
-import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
+import { QUALIFICATION_OPTIONS, ALL_QUALIFICATION_OPTIONS } from "@/constants/qualifications";
 import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 
 interface Company {
@@ -184,7 +184,7 @@ const JobPage: React.FC = () => {
 
         <div className="w-full md:w-80">
           <MultiSelectDropdown
-            options={QUALIFICATION_OPTIONS}
+            options={ALL_QUALIFICATION_OPTIONS}
             selectedValues={qualificationFilter}
             onChange={setQualificationFilter}
             placeholder="All Qualifications"
@@ -285,8 +285,8 @@ const JobPage: React.FC = () => {
                 </p>
 
                 {job.location && (
-                  <p className="text-sm font-medium bg-blue-100 text-blue-800 px-3 py-1 rounded-full inline-block mb-2">
-                    Location: {job.location}
+                  <p className="text-sm font-medium bg-purple-100 text-purple-800 px-3 py-1 rounded-full inline-block mb-2">
+                    District: {job.location}
                   </p>
                 )}
 

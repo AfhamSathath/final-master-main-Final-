@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import generateToken from "../src/utils/generateToken.js";
-import { transporter, generateOTP, sendWorkflowEmail, sendOTP, sendMagicLink, sendAccountCreatedAlert, sendLoginAlert } from "../src/utils/otpService.js";
+import { transporter, generateOTP, sendWorkflowEmail, sendOTP, sendMagicLink, sendAccountCreatedAlert, sendLoginAlert, sendAdminNewCompanyNotification, sendPasswordResetLink } from "../src/utils/otpService.js";
 
 
 import OTP from "../models/OTP.js";
@@ -18,21 +18,25 @@ import OTP from "../models/OTP.js";
 // ================= REGISTER =================
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, contactNumber, location, regNumber, qualificationCategory, qualification } = req.body;
 
     if (!name || !email || !password || !role) {
-      return res.status(400).json({ message: "Please provide all required fields" });
+      return res.status(400).json({ message: "Please provide all required fields (name, email, password, role)" });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check for duplicate accounts
-    const existingUser = await User.findOne({ email: normalizedEmail });
-    const existingCompany = await Company.findOne({ email: normalizedEmail });
+    // Check for duplicate accounts across all models
+    const existingUser = await User.findOne({ 
+      $or: [{ email: normalizedEmail }, { contactNumber }] 
+    });
+    const existingCompany = await Company.findOne({ 
+      $or: [{ email: normalizedEmail }, { contactNumber }, { regNumber }] 
+    });
     const existingAdmin = await Admin.findOne({ email: normalizedEmail });
 
     if (existingUser || existingCompany || existingAdmin) {
-      return res.status(400).json({ message: "Account already exists with this email" });
+      return res.status(400).json({ message: "Account already exists with this email, phone, or registration number" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -40,11 +44,18 @@ export const register = async (req, res) => {
     let account;
     switch (role) {
       case "company":
+        if (!contactNumber || !location || !regNumber) {
+          return res.status(400).json({ message: "Company registration requires contactNumber, location, and regNumber" });
+        }
         account = await Company.create({
           name,
           email: normalizedEmail,
           password: hashedPassword,
           role: "company",
+          contactNumber,
+          location,
+          regNumber,
+          verificationStatus: "pending"
         });
         break;
       case "admin":
@@ -55,12 +66,18 @@ export const register = async (req, res) => {
           role: "admin",
         });
         break;
+      case "user":
       default:
         account = await User.create({
           name,
           email: normalizedEmail,
           password: hashedPassword,
-          role: "user",
+          role: role || "user",
+          contactNumber,
+          location,
+          qualificationCategory,
+          qualification,
+          status: "active"
         });
     }
 
@@ -69,10 +86,17 @@ export const register = async (req, res) => {
     // ✅ Send Account Creation Email (Branded for QJC)
     await sendAccountCreatedAlert(account.email, account.name, account.role);
 
-
+    // ✅ Notify Admin if it's a new Company
+    if (account.role === "company") {
+      await sendAdminNewCompanyNotification({
+        name: account.name,
+        email: account.email,
+        regNumber: account.regNumber,
+        location: account.location
+      }).catch(err => console.error("Failed to notify admin on auth register:", err));
+    }
 
     return res.status(201).json({
-
       _id: account._id,
       name: account.name,
       email: account.email,
@@ -81,7 +105,7 @@ export const register = async (req, res) => {
     });
   } catch (error) {
     console.error("Register error:", error);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -108,6 +132,20 @@ export const login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, account.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // ✅ Check if account is suspended
+    if (account.status === "suspended") {
+      return res.status(403).json({ message: "Your account has been suspended by an administrator. Please contact support." });
+    }
+
+    // ✅ Block Company login until verified
+    if (account.role === "company" && account.verificationStatus !== "verified") {
+      return res.status(403).json({ 
+        message: account.verificationStatus === "pending" 
+          ? "🏢 Your company account is currently pending verification. Please wait for an administrator to approve your registration."
+          : `❌ Your company account was rejected. Reason: ${account.rejectionReason || "None provided"}. Please contact support.` 
+      });
     }
 
     // Check if OTP is REQUIRED for this user
@@ -189,6 +227,15 @@ export const magicLogin = async (req, res) => {
 
     if (!account) {
       return res.status(401).json({ message: "Invalid or expired login link" });
+    }
+
+    // ✅ Block Company login until verified
+    if (account.role === "company" && account.verificationStatus !== "verified") {
+      return res.status(403).json({ 
+        message: account.verificationStatus === "pending" 
+          ? "🏢 Your company account is currently pending verification. Please wait for an administrator to approve your registration."
+          : `❌ Your company account was rejected. Reason: ${account.rejectionReason || "None provided"}. Please contact support.` 
+      });
     }
 
     // Clear the token
@@ -283,12 +330,10 @@ export const forgotPassword = async (req, res) => {
 
     const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: user.email,
-      subject: "Password Reset Request",
-      text: `Click this link to reset your password: ${resetLink}`,
-    });
+    const mailRes = await sendPasswordResetLink(user.email, user.name, resetLink);
+    if (!mailRes.success) {
+      return res.status(500).json({ message: "Failed to send reset link" });
+    }
 
     return res.json({ message: "Password reset link sent successfully" });
   } catch (error) {

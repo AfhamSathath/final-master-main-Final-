@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema({
 
   qualificationCategory: { type: String, default: "" },
   qualification: { type: [String], default: [] },
+  status: { type: String, enum: ["active", "suspended"], default: "active" },
 }, { timestamps: true });
 
 

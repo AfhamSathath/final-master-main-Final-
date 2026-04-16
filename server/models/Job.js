@@ -21,6 +21,12 @@ const JobSchema = new mongoose.Schema(
       default: "paid",
     },
     location: { type: String, default: "" },
+    approvalStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    rejectionReason: { type: String },
   },
   { timestamps: true }
 );

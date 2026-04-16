@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff, Mail, Sparkles, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Mail, Sparkles, ShieldCheck, XCircle } from "lucide-react";
 import { setToken, setUser } from "@/utils/Auth";
 import { io } from "socket.io-client";
 
@@ -304,15 +304,36 @@ const Login: React.FC = () => {
             </div>
 
             {error && (
-              <div className="rounded-md bg-red-50 p-4 mt-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
+              <div className={`rounded-xl border p-5 mt-6 animate-in fade-in slide-in-from-top-4 duration-300 ${
+                error.includes("pending") || error.includes("rejected") || error.includes("suspended")
+                ? "bg-amber-50 border-amber-200" 
+                : "bg-red-50 border-red-200"
+              }`}>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 mt-0.5">
+                    {error.includes("🏢") || error.includes("pending") ? (
+                      <ShieldCheck className="h-5 w-5 text-amber-500" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-500" />
+                    )}
                   </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-red-800">{error}</h3>
+                  <div>
+                    <h3 className={`text-sm font-bold ${
+                      error.includes("pending") || error.includes("rejected") || error.includes("suspended")
+                      ? "text-amber-900" 
+                      : "text-red-900"
+                    }`}>
+                      {error.includes("pending") ? "Account Verification Required" : 
+                       error.includes("rejected") ? "Account Verification Rejected" : 
+                       error.includes("suspended") ? "Account Suspended" : "Authentication Error"}
+                    </h3>
+                    <div className={`mt-1 text-sm ${
+                      error.includes("pending") || error.includes("rejected") || error.includes("suspended")
+                      ? "text-amber-700" 
+                      : "text-red-700"
+                    }`}>
+                      {error}
+                    </div>
                   </div>
                 </div>
               </div>

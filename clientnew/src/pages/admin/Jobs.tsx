@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
-import { QUALIFICATION_OPTIONS } from "@/constants/qualifications";
+import { QUALIFICATION_OPTIONS, ALL_QUALIFICATION_OPTIONS } from "@/constants/qualifications";
 import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 import {
   Edit,
@@ -30,6 +30,8 @@ type Job = {
   positionType?: "full-time" | "part-time" | "internship";
   paymentType?: "paid" | "unpaid";
   location?: string;
+  approvalStatus: "pending" | "approved" | "rejected";
+  rejectionReason?: string;
 };
 
 type NewJob = Omit<Job, "_id">;
@@ -87,6 +89,16 @@ const deleteJob = async (id: string) => {
   await axios.delete(`${API_BASE}/${id}`);
 };
 
+const approveJobAPI = async (id: string) => {
+  const res = await axios.put(`${API_BASE}/${id}/approve`);
+  return res.data;
+};
+
+const rejectJobAPI = async ({ id, reason }: { id: string; reason: string }) => {
+  const res = await axios.put(`${API_BASE}/${id}/reject`, { reason });
+  return res.data;
+};
+
 // ================== COMPONENT ==================
 const AdminJobsPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -97,6 +109,7 @@ const AdminJobsPage: React.FC = () => {
   const [filterLocation, setFilterLocation] = useState("");
   const [filterJobType, setFilterJobType] = useState("");
   const [filterPaymentType, setFilterPaymentType] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("pending");
   const [filterQualification, setFilterQualification] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState<NewJob>({
@@ -108,6 +121,7 @@ const AdminJobsPage: React.FC = () => {
     closeDate: "",
     category: "",
     location: "",
+    approvalStatus: "pending",
   });
 
   const { data: jobs = [], isLoading, isError } = useQuery<Job[]>({
@@ -152,6 +166,24 @@ const AdminJobsPage: React.FC = () => {
     onError: () => toast.error("❌ Failed to delete job"),
   });
 
+  const approveMutation = useMutation({
+    mutationFn: approveJobAPI,
+    onSuccess: () => {
+      toast.success("✅ Job approved and live!");
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+    },
+    onError: () => toast.error("❌ Failed to approve job"),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: rejectJobAPI,
+    onSuccess: () => {
+      toast.success("❌ Job rejected.");
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+    },
+    onError: () => toast.error("❌ Failed to reject job"),
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.company) {
@@ -168,16 +200,19 @@ const AdminJobsPage: React.FC = () => {
     const matchesLocation = filterLocation ? job.location === filterLocation : true;
     const matchesJobType = filterJobType ? job.positionType === filterJobType : true;
     const matchesPaymentType = filterPaymentType ? job.paymentType === filterPaymentType : true;
+    const matchesStatus = filterStatus === "all" ? true : job.approvalStatus === filterStatus;
     const matchesQualification = filterQualification.length > 0 ? filterQualification.some(q => job.qualification && job.qualification.includes(q)) : true;
     const matchesSearch =
       searchTerm.trim() === "" ||
       job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (job.location || "").toLowerCase().includes(searchTerm.toLowerCase());
+      (job.location || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.company.toLowerCase().includes(searchTerm.toLowerCase());
     return (
       matchesCategory &&
       matchesLocation &&
       matchesJobType &&
       matchesPaymentType &&
+      matchesStatus &&
       matchesQualification &&
       matchesSearch
     );
@@ -197,14 +232,24 @@ const AdminJobsPage: React.FC = () => {
       </h1>
 
       {/* Filter & Search & Add */}
-      <div className="flex flex-col md:flex-row justify-between gap-4 max-w-5xl mx-auto mb-8">
+      <div className="flex flex-col md:flex-row justify-between gap-4 max-w-6xl mx-auto mb-8">
         <input
           type="text"
-          placeholder="🔍 Search by title"
+          placeholder="🔍 Search title or company"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="border rounded-lg p-3 flex-1 bg-white shadow-sm focus:ring-2 focus:ring-blue-400"
         />
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="border rounded-lg p-3 bg-white shadow-sm font-bold text-blue-800 focus:ring-2 focus:ring-blue-400"
+        >
+          <option value="pending">⏳ Pending Review</option>
+          <option value="approved">✅ Approved/Live</option>
+          <option value="rejected">❌ Rejected</option>
+          <option value="all">🌐 All Statuses</option>
+        </select>
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
@@ -213,36 +258,6 @@ const AdminJobsPage: React.FC = () => {
           <option value="">All Categories</option>
           {CATEGORY_OPTIONS.map((cat) => (
             <option key={cat}>{cat}</option>
-          ))}
-        </select>
-        <select
-          value={filterLocation}
-          onChange={(e) => setFilterLocation(e.target.value)}
-          className="border rounded-lg p-3 bg-white shadow-sm focus:ring-2 focus:ring-blue-400"
-        >
-          <option value="">All Districts</option>
-          {SRI_LANKA_DISTRICTS.map((district) => (
-            <option key={district} value={district}>{district}</option>
-          ))}
-        </select>
-        <select
-          value={filterJobType}
-          onChange={(e) => setFilterJobType(e.target.value)}
-          className="border rounded-lg p-3 bg-white shadow-sm focus:ring-2 focus:ring-blue-400"
-        >
-          <option value="">All Types</option>
-          {JOB_TYPE_OPTIONS.map((type) => (
-            <option key={type} value={type}>{type}</option>
-          ))}
-        </select>
-        <select
-          value={filterPaymentType}
-          onChange={(e) => setFilterPaymentType(e.target.value)}
-          className="border rounded-lg p-3 bg-white shadow-sm focus:ring-2 focus:ring-blue-400"
-        >
-          <option value="">All Payments</option>
-          {PAYMENT_TYPE_OPTIONS.map((type) => (
-            <option key={type} value={type}>{type}</option>
           ))}
         </select>
         <button
@@ -260,9 +275,10 @@ const AdminJobsPage: React.FC = () => {
               location: filterLocation || "",
               positionType: "full-time",
               paymentType: "paid",
+              approvalStatus: "approved", // manual add by admin defaults to approved
             });
           }}
-          className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-3 rounded-xl font-medium shadow-md hover:shadow-lg flex items-center gap-2 transition-transform hover:scale-105"
+          className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-5 py-3 rounded-xl font-medium shadow-md hover:shadow-lg flex items-center gap-2 transition-transform hover:scale-105"
         >
           <PlusCircle className="w-5 h-5" /> Add Job
         </button>
@@ -270,123 +286,130 @@ const AdminJobsPage: React.FC = () => {
 
       {/* Jobs Grid */}
       {filteredJobs.length === 0 ? (
-        <p className="text-center text-gray-600 italic">No jobs found.</p>
+        <div className="text-center py-20 bg-white/50 rounded-3xl border border-dashed border-gray-300 mx-auto max-w-4xl">
+            <p className="text-gray-500 text-lg italic font-medium">No job postings match your current filters.</p>
+        </div>
       ) : (
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {filteredJobs.map((job) => (
             <div
               key={job._id}
-              className="bg-white/70 backdrop-blur-md border border-gray-200 shadow-md rounded-2xl p-6 transition hover:shadow-xl hover:-translate-y-1"
+              className={`bg-white/90 backdrop-blur-md border ${job.approvalStatus === 'pending' ? 'border-yellow-300 ring-2 ring-yellow-400/20' : 'border-gray-200'} shadow-md rounded-2xl p-6 transition hover:shadow-xl group`}
             >
               <div className="flex justify-between items-start mb-3">
-                <h2 className="text-xl font-semibold text-gray-800">
+                <h2 className="text-xl font-bold text-gray-900 group-hover:text-blue-700 transition-colors">
                   {job.title}
                 </h2>
                 <span
-                  className={`text-xs px-2 py-1 rounded-full font-semibold ${
-                    CATEGORY_COLORS[job.category || ""] ||
-                    "bg-gray-100 text-gray-800"
+                  className={`text-[10px] px-2 py-1 rounded-full font-black uppercase tracking-tighter ${
+                    job.approvalStatus === "approved" ? "bg-green-100 text-green-700" :
+                    job.approvalStatus === "rejected" ? "bg-red-100 text-red-700" :
+                    "bg-yellow-100 text-yellow-700 animate-pulse"
                   }`}
                 >
-                  {job.category || ""}
+                  {job.approvalStatus}
                 </span>
               </div>
 
               <div className="space-y-2 mb-4">
                 <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm bg-blue-50 text-blue-800 px-2 py-1 rounded-md font-medium">
+                  <div className="p-1.5 bg-blue-50 rounded">
+                    <Building2 className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <span className="text-sm font-bold text-gray-700">
                     {job.company}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <GraduationCap className="w-4 h-4 text-emerald-600" />
-                  <span className="text-sm bg-emerald-50 text-emerald-800 px-2 py-1 rounded-md font-medium">
-                    Qualification: {(job.qualification && job.qualification.length > 0) ? job.qualification.join(", ") : "N/A"}
+                   <div className="p-1.5 bg-emerald-50 rounded">
+                    <GraduationCap className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <span className="text-sm text-gray-600">
+                    {(job.qualification && job.qualification.length > 0) ? job.qualification.join(", ") : "N/A"}
                   </span>
                 </div>
 
-{job.positionType && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm bg-purple-50 text-purple-800 px-2 py-1 rounded-md font-medium">
-                          Type: {job.positionType}
+                <div className="flex gap-2 flex-wrap mt-2">
+                    {job.positionType && (
+                        <span className="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-bold border border-purple-100 uppercase">
+                            {job.positionType}
                         </span>
-                      </div>
                     )}
                     {job.paymentType && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm bg-yellow-50 text-yellow-800 px-2 py-1 rounded-md font-medium">
-                          Payment: {job.paymentType}
+                        <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-bold border border-amber-100 uppercase">
+                            {job.paymentType}
                         </span>
-                      </div>
                     )}
                     {job.location && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm bg-blue-50 text-blue-800 px-2 py-1 rounded-md font-medium">
-                      Location: {job.location}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-purple-600" />
-                  <span className="text-sm bg-purple-50 text-purple-800 px-2 py-1 rounded-md font-medium">
-                    Open: {job.openDate || "N/A"}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-rose-600" />
-                  <span className="text-sm bg-rose-50 text-rose-800 px-2 py-1 rounded-md font-medium">
-                    Close: {job.closeDate || "N/A"}
-                  </span>
+                        <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold border border-blue-100 uppercase">
+                            {job.location}
+                        </span>
+                    )}
                 </div>
               </div>
 
-              <p className="text-gray-700 text-sm mb-4 border-t pt-2">
-                <Linkify
-                  tagName="span"
-                  options={{
-                    target: "_blank",
-                    rel: "noopener noreferrer",
-                    className:
-                      "text-blue-600 underline hover:text-blue-800 break-words",
-                  }}
-                >
+              <div className="text-gray-600 text-sm mb-6 border-t pt-3 line-clamp-3">
+                <Linkify options={{ target: "_blank", className: "text-blue-600 hover:underline" }}>
                   {job.description || "No description provided."}
                 </Linkify>
-              </p>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setEditingJob(job);
-                    setFormData({
-                      title: job.title,
-                      description: job.description,
-                      company: job.company,
-                      qualification: job.qualification || [],
-                      openDate: job.openDate,
-                      closeDate: job.closeDate,
-                      category: job.category,
-                      location: job.location || "",
-                      positionType: job.positionType || "full-time",
-                      paymentType: job.paymentType || "paid",
-                    });
-                    setShowForm(true);
-                  }}
-                  className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
-                >
-                  <Edit className="w-4 h-4" /> Edit
-                </button>
-                <button
-                  onClick={() => deleteMutation.mutate(job._id)}
-                  className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
-                >
-                  <Trash2 className="w-4 h-4" /> Delete
-                </button>
               </div>
+
+              {job.approvalStatus === "pending" ? (
+                  <div className="flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <button
+                            onClick={() => {
+                                if(window.confirm(`Approve "${job.title}"?`)) approveMutation.mutate(job._id);
+                            }}
+                            className="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700 transition text-xs shadow-sm"
+                        >
+                            Approve Posting
+                        </button>
+                        <button
+                            onClick={() => {
+                                const reason = window.prompt("Reason for rejection:");
+                                if(reason) rejectMutation.mutate({ id: job._id, reason });
+                            }}
+                            className="flex-1 bg-white text-red-600 border border-red-200 py-2 rounded-lg font-bold hover:bg-red-50 transition text-xs shadow-sm"
+                        >
+                            Reject
+                        </button>
+                      </div>
+                      <button 
+                        onClick={() => {
+                            setEditingJob(job);
+                            setFormData({ ...job, qualification: job.qualification || [] });
+                            setShowForm(true);
+                        }}
+                        className="w-full bg-gray-100 text-gray-700 py-2 rounded-lg text-xs font-bold hover:bg-gray-200 transition"
+                      >
+                          Review & Edit Job Info
+                      </button>
+                  </div>
+              ) : (
+                <div className="flex gap-2 border-t pt-4">
+                  <button
+                    onClick={() => {
+                      setEditingJob(job);
+                      setFormData({
+                        ...job,
+                        qualification: job.qualification || [],
+                      });
+                      setShowForm(true);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1 bg-blue-50 text-blue-600 py-2 rounded-lg hover:bg-blue-100 transition text-xs font-bold"
+                  >
+                    <Edit className="w-3 h-3" /> Edit
+                  </button>
+                  <button
+                    onClick={() => { if(window.confirm("Delete job?")) deleteMutation.mutate(job._id); }}
+                    className="flex-1 flex items-center justify-center gap-1 bg-red-50 text-red-600 py-2 rounded-lg hover:bg-red-100 transition text-xs font-bold"
+                  >
+                    <Trash2 className="w-3 h-3" /> Delete
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -442,7 +465,7 @@ const AdminJobsPage: React.FC = () => {
               </select>
               <div className="w-full">
                 <MultiSelectDropdown
-                  options={QUALIFICATION_OPTIONS}
+                  options={ALL_QUALIFICATION_OPTIONS}
                   selectedValues={formData.qualification as string[]}
                   onChange={(selected: string[]) => setFormData({ ...formData, qualification: selected })}
                   placeholder="Select Qualification(s)"

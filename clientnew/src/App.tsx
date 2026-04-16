@@ -34,6 +34,8 @@ import Profile from "./pages/Profile";
 import AdminJobs from "./pages/admin/Jobs";
 import AdminCoursesPage from "./pages/admin/Courses";
 import Users from "./pages/admin/Users";
+import Companies from "./pages/admin/Companies";
+import Reports from "./pages/admin/Reports";
 
 // ===== Company Pages =====
 import CompanyJobsPage from "./pages/company/Jobs";
@@ -70,91 +72,93 @@ const App: React.FC = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
-              {/* ===== Public Routes ===== */}
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/courses" element={<Courses />} />
-              <Route path="/jobs" element={<UserJobs />} />
-              <Route path="/help" element={<HelpCenter />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/contact" element={<ContactUs />} />
-              <Route path="/terms" element={<TermsOfService />} />
-              <Route path="/unauthorized" element={<Unauthorized />} />
-              <Route path="/forgot-password" element={<ForgetPassword/>}/>
-              <Route path="/verify-otp" element={<VerifyOtp/>}/>
-          <Route path="/reset-password" element={<ResetPassword/>} />
-              <Route path="/magic-login" element={<MagicLogin />} />
+          {/* ===== Public Routes ===== */}
+          <Route path="/" element={<Index />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/courses" element={<Courses />} />
+          <Route path="/jobs" element={<UserJobs />} />
+          <Route path="/help" element={<HelpCenter />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/contact" element={<ContactUs />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
+          <Route path="/forgot-password" element={<ForgetPassword />} />
+          <Route path="/verify-otp" element={<VerifyOtp />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/magic-login" element={<MagicLogin />} />
 
-              <Route path="/CoursesFront" element={<CoursesFront/>} />
-              <Route path="/JobsFront" element={<JobsFront/>} />
+          <Route path="/CoursesFront" element={<CoursesFront />} />
+          <Route path="/JobsFront" element={<JobsFront />} />
 
-              {/* ===== Role-based Redirect ===== */}
-              <Route path="/dashboard" element={<RoleBasedRedirect />} />
+          {/* ===== Role-based Redirect ===== */}
+          <Route path="/dashboard" element={<RoleBasedRedirect />} />
 
-              {/* ===== USER DASHBOARD ===== */}
-              <Route
-                path="/user-dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={["user"]}>
-                    <UserDashboard />
-                  </ProtectedRoute>
-                }
-              />
+          {/* ===== USER DASHBOARD ===== */}
+          <Route
+            path="/user-dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["user"]}>
+                <UserDashboard />
+              </ProtectedRoute>
+            }
+          />
 
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute allowedRoles={["user"]}>
-                    <Profile />
-                  </ProtectedRoute>
-                }
-              />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute allowedRoles={["user"]}>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
 
-              {/* ===== COMPANY DASHBOARD ===== */}
-              <Route
-                path="/company-dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={["company"]}>
-                    <CompanyDashboard />
-                  </ProtectedRoute>
-                }
-              >
-                <Route path="jobs" element={<CompanyJobsPage />} />
-                <Route path="courses" element={<CompanyCoursesPage />} />
-                <Route path="" element={<Navigate to="jobs" replace />} />
-                <Route path="Profile" element={<CompanyProfile/>} />
-              </Route>
+          {/* ===== COMPANY DASHBOARD ===== */}
+          <Route
+            path="/company-dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["company"]}>
+                <CompanyDashboard />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="jobs" element={<CompanyJobsPage />} />
+            <Route path="courses" element={<CompanyCoursesPage />} />
+            <Route path="" element={<Navigate to="jobs" replace />} />
+            <Route path="Profile" element={<CompanyProfile />} />
+          </Route>
 
-              {/* ===== ADMIN DASHBOARD ===== */}
-              <Route
-                path="/admin-dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                }
-              >
-                <Route path="" element={<Navigate to="users" replace />} />
-                <Route path="users" element={<Users />} />
-                <Route path="jobs" element={<AdminJobs />} />
-                <Route path="courses" element={<AdminCoursesPage />} />
-              </Route>
+          {/* ===== ADMIN DASHBOARD ===== */}
+          <Route
+            path="/admin-dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="" element={<Navigate to="users" replace />} />
+            <Route path="users" element={<Users />} />
+            <Route path="companies" element={<Companies />} />
+            <Route path="jobs" element={<AdminJobs />} />
+            <Route path="courses" element={<AdminCoursesPage />} />
+            <Route path="reports" element={<Reports />} />
+          </Route>
 
-              {/* ===== Backward Compatibility Redirects ===== */}
-              <Route path="/admin/users" element={<Navigate to="/admin-dashboard/users" replace />} />
-              <Route path="/admin/jobs" element={<Navigate to="/admin-dashboard/jobs" replace />} />
-              <Route path="/admin/courses" element={<Navigate to="/admin-dashboard/courses" replace />} />
+          {/* ===== Backward Compatibility Redirects ===== */}
+          <Route path="/admin/users" element={<Navigate to="/admin-dashboard/users" replace />} />
+          <Route path="/admin/jobs" element={<Navigate to="/admin-dashboard/jobs" replace />} />
+          <Route path="/admin/courses" element={<Navigate to="/admin-dashboard/courses" replace />} />
 
-              <Route path="/company/jobs" element={<Navigate to="/company-dashboard/jobs" replace />} />
-              <Route path="/company/courses" element={<Navigate to="/company-dashboard/courses" replace />} />
-               <Route path="/company/Profile" element={<Navigate to="/company-dashboard/profile" replace />} />
+          <Route path="/company/jobs" element={<Navigate to="/company-dashboard/jobs" replace />} />
+          <Route path="/company/courses" element={<Navigate to="/company-dashboard/courses" replace />} />
+          <Route path="/company/Profile" element={<Navigate to="/company-dashboard/profile" replace />} />
 
-              {/* ===== Catch-all 404 ===== */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+          {/* ===== Catch-all 404 ===== */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

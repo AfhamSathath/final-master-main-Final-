@@ -18,6 +18,8 @@ interface Company {
   regNumber: string;
   contactNumber: string;
   location: string;
+  verificationStatus: "pending" | "verified" | "rejected";
+  rejectionReason?: string;
   joinedDate?: string;
 }
 
@@ -64,7 +66,7 @@ const CompanyProfile: React.FC = () => {
       setCompany(response.data);
       setEditedCompany(response.data);
       setLoading(false);
-      toast.success("✅ Profile loaded successfully!");
+      // toast.success("✅ Profile loaded successfully!");
     } catch (error) {
       console.error("Failed to fetch company:", error);
       toast.error("❌ Failed to load company profile. Please try again.");
@@ -107,6 +109,8 @@ const CompanyProfile: React.FC = () => {
       newSocket.disconnect();
     };
   }, [navigate]);
+
+  const isVerified = company?.verificationStatus === "verified";
 
   if (loading) {
     return (
@@ -160,14 +164,13 @@ const CompanyProfile: React.FC = () => {
   return (
     <ProtectedRoute allowedRoles={["company"]}>
       <div className="min-h-screen bg-gray-100">
-        {/* Toast container */}
         <Toaster position="top-right" reverseOrder={false} />
 
-        <header className="sticky top-0 bg-gradient-to-r from-green-500 to-blue-500 text-white shadow-lg z-50">
+        <header className="sticky top-0 bg-gradient-to-r from-green-600 to-indigo-700 text-white shadow-lg z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
               <Briefcase className="h-8 w-8 text-white" />
-              <span className="text-2xl font-bold tracking-tight">CareerLink LK</span>
+              <span className="text-2xl font-bold tracking-tight">QJC Partner Panel</span>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-white font-medium">Hello, {company.name}</span>
@@ -175,67 +178,112 @@ const CompanyProfile: React.FC = () => {
           </div>
         </header>
 
-        <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          <Card className="shadow-md hover:shadow-xl transition-shadow border-t-4 border-green-500">
-            <CardHeader className="bg-green-50 rounded-t-lg flex justify-between items-center">
-              <CardTitle className="flex items-center text-green-700">
-                <Users className="w-5 h-5 mr-2" /> Company Profile
-              </CardTitle>
+        <main className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+          {/* Verification Warning */}
+          {!isVerified && (
+            <div className="mb-8 bg-amber-50 border-l-4 border-amber-500 p-6 rounded-2xl shadow-md animate-in slide-in-from-top-4 duration-500">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 bg-amber-100 p-2 rounded-lg">
+                  <svg className="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-bold text-amber-900">
+                    Account Verification Required
+                  </h3>
+                  <div className="mt-1 text-sm text-amber-800 leading-relaxed">
+                    <p>
+                      {company.verificationStatus === "pending" 
+                        ? "Your business profile is currently awaiting administrative approval. Profile editing is disabled during this period to ensure data consistency."
+                        : `Your account verification was rejected. Reason: ${company.rejectionReason || "None provided"}. Please contact support for assistance.`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <Card className={`shadow-xl border-0 overflow-hidden rounded-3xl transition-all duration-300 ${!isVerified ? 'opacity-90' : ''}`}>
+            <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 border-b flex flex-row justify-between items-center py-8 px-10">
+              <div>
+                <CardTitle className="flex items-center text-slate-800 text-2xl font-black">
+                  <Users className="w-8 h-8 mr-4 text-indigo-600" /> Company Profile
+                </CardTitle>
+                <p className="text-slate-500 text-sm mt-1 ml-12 font-medium">Manage your corporate credentials and location.</p>
+              </div>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => (isEditing ? handleSave() : setIsEditing(true))}
-                className="flex items-center gap-2"
+                variant={isEditing ? "default" : "outline"}
+                size="lg"
+                disabled={!isVerified}
+                onClick={() => {
+                  if (!isVerified) {
+                    toast.error("Account verification required to edit profile.");
+                    return;
+                  }
+                  isEditing ? handleSave() : setIsEditing(true);
+                }}
+                className={`flex items-center gap-3 rounded-2xl font-bold px-8 ${isEditing ? 'bg-indigo-600 hover:bg-indigo-700' : 'border-2'}`}
               >
-                {isEditing ? <Save className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
-                {isEditing ? "Save" : "Edit"}
+                {isEditing ? <Save className="w-5 h-5" /> : <Edit2 className="w-5 h-5" />}
+                {isEditing ? "Save Changes" : "Edit Profile"}
               </Button>
             </CardHeader>
 
-            <CardContent className="pt-6 space-y-4">
+            <CardContent className="p-10 space-y-8">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (isEditing) handleSave();
                 }}
+                className="grid gap-8"
               >
-                {(["name", "email", "regNumber"] as (keyof Company)[]).map((field) => (
-                  <div className="flex flex-col" key={field}>
-                    <label className="text-sm text-gray-500">
-                      {field === "regNumber"
-                        ? "Registration Number"
-                        : field.charAt(0).toUpperCase() + field.slice(1)}
-                    </label>
-                    <Input value={company[field]} readOnly className="border-gray-300 bg-gray-100" />
-                  </div>
-                ))}
+                <div className="grid md:grid-cols-2 gap-8">
+                  {(["name", "email", "regNumber"] as (keyof Company)[]).map((field) => (
+                    <div className="flex flex-col gap-2" key={field}>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">
+                        {field === "regNumber"
+                          ? "Business Reg Number"
+                          : field.charAt(0).toUpperCase() + field.slice(1)}
+                      </label>
+                      <Input 
+                        value={company[field]} 
+                        readOnly 
+                        className="bg-slate-50 border-slate-200 text-slate-600 font-bold h-12 rounded-xl focus:ring-0 cursor-not-allowed shadow-inner" 
+                      />
+                    </div>
+                  ))}
 
-                {(["contactNumber", "location"] as (keyof Company)[]).map((field) => (
-                  <div className="flex flex-col" key={field}>
-                    <label className="text-sm text-gray-500">
-                      {field === "contactNumber" ? "Contact Number" : "Location"}
-                    </label>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Joined Date</label>
                     <Input
-                      value={editedCompany[field]}
-                      readOnly={!isEditing}
-                      onChange={(e) => handleChange(field, e.target.value)}
-                      className={`border-green-500 focus:border-green-600 ${
-                        isEditing ? "" : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    />
-                  </div>
-                ))}
-
-                {company.joinedDate && (
-                  <div className="flex flex-col">
-                    <label className="text-sm text-gray-500">Joined</label>
-                    <Input
-                      value={new Date(company.joinedDate).toLocaleDateString()}
+                      value={company.joinedDate ? new Date(company.joinedDate).toLocaleDateString() : "N/A"}
                       readOnly
-                      className="border-gray-300 bg-gray-100"
+                      className="bg-slate-50 border-slate-200 text-slate-600 font-bold h-12 rounded-xl focus:ring-0 cursor-not-allowed shadow-inner"
                     />
                   </div>
-                )}
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-8 pt-6 border-t border-slate-100">
+                  {(["contactNumber", "location"] as (keyof Company)[]).map((field) => (
+                    <div className="flex flex-col gap-2" key={field}>
+                      <label className="text-xs font-black text-indigo-600 uppercase tracking-widest ml-1">
+                        {field === "contactNumber" ? "Corporate Contact" : "Main Operation Base"}
+                      </label>
+                      <Input
+                        value={isEditing ? editedCompany[field] : company[field]}
+                        readOnly={!isEditing}
+                        onChange={(e) => handleChange(field, e.target.value)}
+                        placeholder={`Enter ${field}`}
+                        className={`h-12 rounded-xl font-bold transition-all duration-300 ${
+                          isEditing 
+                          ? "border-indigo-400 ring-4 ring-indigo-50 bg-white" 
+                          : "bg-slate-50 border-slate-200 text-slate-600 cursor-not-allowed shadow-inner"
+                        }`}
+                      />
+                    </div>
+                  ))}
+                </div>
 
                 {isEditing && <button type="submit" className="hidden"></button>}
               </form>

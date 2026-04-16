@@ -5,6 +5,8 @@ import { io, Socket } from "socket.io-client";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { getUser } from "@/utils/Auth";
+import { QUALIFICATION_OPTIONS, ALL_QUALIFICATION_OPTIONS } from "@/constants/qualifications";
+import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
 
@@ -13,7 +15,7 @@ interface Course {
   name?: string;
   institution?: string;
   description?: string;
-  qualification?: string;
+  qualification?: string[];
   duration?: string;
   category?: string;
   courseType?: "full-time" | "part-time";
@@ -28,6 +30,7 @@ const CoursePage: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [qualificationFilter, setQualificationFilter] = useState<string[]>([]);
   const [courseType, setCourseType] = useState("");
   const [paymentType, setPaymentType] = useState("");
   const [location, setLocation] = useState(() => getUser()?.location || "");
@@ -45,6 +48,7 @@ const CoursePage: React.FC = () => {
       if (courseType) url.searchParams.append("courseType", courseType);
       if (paymentType) url.searchParams.append("paymentType", paymentType);
       if (location) url.searchParams.append("location", location);
+      if (qualificationFilter.length > 0) url.searchParams.append("qualification", qualificationFilter.join(","));
 
       const res = await fetch(url.toString(), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -59,7 +63,7 @@ const CoursePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, courseType, paymentType, location]);
+  }, [searchTerm, courseType, paymentType, location, qualificationFilter]);
 
   useEffect(() => {
     fetchCourses();
@@ -114,7 +118,7 @@ const CoursePage: React.FC = () => {
         </p>
       </div>
 
-      <div className="max-w-6xl mx-auto mb-6 flex flex-wrap gap-3 justify-center">
+      <div className="max-w-7xl mx-auto mb-6 flex flex-wrap gap-3 justify-center">
         <input
           type="text"
           placeholder="Search courses..."
@@ -122,6 +126,16 @@ const CoursePage: React.FC = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="border rounded-lg px-3 py-2 w-full sm:w-64"
         />
+
+        <div className="w-full sm:w-80">
+          <MultiSelectDropdown
+            options={ALL_QUALIFICATION_OPTIONS}
+            selectedValues={qualificationFilter}
+            onChange={setQualificationFilter}
+            placeholder="All Qualifications"
+          />
+        </div>
+
         <select
           value={courseType}
           onChange={(e) => setCourseType(e.target.value)}
@@ -162,6 +176,7 @@ const CoursePage: React.FC = () => {
         <button
           onClick={() => {
             setSearchTerm("");
+            setQualificationFilter([]);
             setCourseType("");
             setPaymentType("");
             setLocation("");
@@ -172,8 +187,15 @@ const CoursePage: React.FC = () => {
         </button>
       </div>
 
+      {/* ===== Filtering Logic ===== */}
+      {/* Client-side filtering for qualification */}
       {/* ===== Course Cards ===== */}
-      {courses.length > 0 ? (
+      {courses.filter((course) => {
+        const matchesQualification = qualificationFilter.length > 0
+          ? qualificationFilter.some((q) => course.qualification && course.qualification.includes(q))
+          : true;
+        return matchesQualification;
+      }).length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {courses.map((course) => (
             <Card
@@ -204,7 +226,7 @@ const CoursePage: React.FC = () => {
                   )}
                   {course.location && (
                     <p className="text-sm text-gray-600 mb-1">
-                      Location: {course.location}
+                      <strong>District:</strong> {course.location}
                     </p>
                   )}
                   {course.duration && (
@@ -212,9 +234,9 @@ const CoursePage: React.FC = () => {
                       Duration: {course.duration}
                     </p>
                   )}
-                  {course.qualification && (
+                  {course.qualification && course.qualification.length > 0 && (
                     <p className="text-sm text-gray-500">
-                      Qualification: {course.qualification}
+                      Qualifications: {course.qualification.join(", ")}
                     </p>
                   )}
                 </div>

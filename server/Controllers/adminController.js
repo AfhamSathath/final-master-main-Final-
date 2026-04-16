@@ -1,16 +1,16 @@
 import User from "../models/User.js";
 import Company from "../models/Company.js";
 import Admin from "../models/admin.js";
+import Notification from "../models/Notification.js";
 import bcrypt from "bcryptjs";
 import generateToken from "../src/utils/generateToken.js";
-import { sendWorkflowEmail } from "../src/utils/otpService.js";
-
-
+import { sendWorkflowEmail, sendCompanyVerificationAlert, sendAccountStatusAlert, sendProfileUpdatedAlert, sendAdminNewCompanyNotification } from "../src/utils/otpService.js";
+import { emitNotification } from "../src/utils/socketManager.js";
 
 // ================= REGISTER =================
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, contactNumber, location, regNumber } = req.body;
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({ message: "Please provide all required fields" });
@@ -36,6 +36,10 @@ export const register = async (req, res) => {
           email: normalizedEmail,
           password: hashedPassword,
           role: "company",
+          contactNumber,
+          location,
+          regNumber,
+          verificationStatus: "pending"
         });
         break;
       case "admin":
@@ -52,8 +56,22 @@ export const register = async (req, res) => {
           email: normalizedEmail,
           password: hashedPassword,
           role: "user",
+          contactNumber,
+          location
         });
         break;
+    }
+
+    await account.save();
+
+    // ✅ Notify Admin if it's a new Company
+    if (account.role === "company") {
+      await sendAdminNewCompanyNotification({
+        name: account.name,
+        email: account.email,
+        regNumber: account.regNumber,
+        location: account.location
+      }).catch(err => console.error("Failed to notify admin on admin reg:", err));
     }
 
     return res.status(201).json({
@@ -65,7 +83,7 @@ export const register = async (req, res) => {
     });
   } catch (error) {
     console.error("Register error:", error);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -154,10 +172,7 @@ export const createAdmin = async (req, res) => {
       newAdmin.name,
       "Administrative Access Granted",
       `You have been appointed as an administrator for the Qualification Based Job Finder System. Your account has been successfully initialized.\n\nPlease log in to manage the system configurations, oversee qualifications, and manage users.`
-
     );
-
-
 
     res.status(201).json({
       _id: newAdmin._id,
@@ -186,14 +201,7 @@ export const updateAdmin = async (req, res) => {
     if (!updatedAdmin) return res.status(404).json({ message: "Admin not found" });
 
     // ✅ Send Admin Update Notification (Security Alert)
-    await sendWorkflowEmail(
-      updatedAdmin.email,
-      updatedAdmin.name,
-      "Security Alert: Admin Profile Updated",
-      "Your administrative profile was recently updated in the Qualification Based Job Finder System. If you did not perform this update, please contact the support team or your manager."
-
-    );
-
+    await sendProfileUpdatedAlert(updatedAdmin.email, updatedAdmin.name, true);
 
     res.status(200).json(updatedAdmin);
 
@@ -217,3 +225,112 @@ export const deleteAdmin = async (req, res) => {
     res.status(500).json({ message: "Failed to delete admin" });
   }
 };
+
+// ================= COMPANY VERIFICATION (ADMIN) =================
+
+export const verifyCompany = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const company = await Company.findById(id);
+    if (!company) return res.status(404).json({ message: "Company not found" });
+
+    company.verificationStatus = "verified";
+    await company.save();
+
+    // ✅ Notify Company about Verification Success
+    await sendCompanyVerificationAlert(company.email, company.name, "verified");
+
+    res.status(200).json({ message: "Company verified successfully", company });
+  } catch (error) {
+    console.error("Verify Company error:", error);
+    res.status(500).json({ message: "Failed to verify company" });
+  }
+};
+
+export const rejectCompany = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const company = await Company.findById(id);
+    if (!company) return res.status(404).json({ message: "Company not found" });
+
+    company.verificationStatus = "rejected";
+    company.rejectionReason = reason || "Documents provided were insufficient or invalid.";
+    await company.save();
+
+    // ✅ Notify Company about Rejection
+    await sendCompanyVerificationAlert(company.email, company.name, "rejected", company.rejectionReason);
+
+    res.status(200).json({ message: "Company rejected", company });
+  } catch (error) {
+    console.error("Reject Company error:", error);
+    res.status(500).json({ message: "Failed to reject company" });
+  }
+};
+
+// ================= USER MANAGEMENT (ADMIN) =================
+
+export const suspendUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.status = "suspended";
+    await user.save();
+
+    // ✅ Send Account Suspension Email
+    await sendAccountStatusAlert(user.email, user.name, "suspended");
+
+    res.status(200).json({ message: "User suspended", user });
+  } catch (error) {
+    console.error("Suspend User error:", error);
+    res.status(500).json({ message: "Failed to suspend user" });
+  }
+};
+
+export const deleteUserAccount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findByIdAndDelete(id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // ✅ Send Account Deletion Email
+    await sendAccountStatusAlert(user.email, user.name, "deleted");
+
+    res.status(200).json({ message: "User deleted" });
+  } catch (error) {
+    console.error("Delete User error:", error);
+    res.status(500).json({ message: "Failed to delete user" });
+  }
+};
+
+export const notifyAllUsers = async (req, res) => {
+    try {
+      const { title, message } = req.body;
+      if (!title || !message) {
+        return res.status(400).json({ message: "Title and message are required" });
+      }
+  
+      const users = await User.find({ role: "user" });
+  
+      const notifications = users.map(user => ({
+        userId: user._id,
+        type: "system",
+        title,
+        message,
+        read: false,
+      }));
+  
+      if (notifications.length > 0) {
+        const savedNotifications = await Notification.insertMany(notifications);
+        // ✅ Real-time Socket Broadcast
+        savedNotifications.forEach(n => emitNotification(n.userId, n));
+      }
+  
+      res.status(200).json({ message: "Broadcast sent to all users successfully" });
+    } catch (error) {
+      console.error("Notify All error:", error);
+      res.status(500).json({ message: "Failed to send broadcast" });
+    }
+  };

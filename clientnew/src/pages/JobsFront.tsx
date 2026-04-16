@@ -5,6 +5,8 @@ import { io, Socket } from "socket.io-client";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { getUser } from "@/utils/Auth";
+import { QUALIFICATION_OPTIONS, ALL_QUALIFICATION_OPTIONS } from "@/constants/qualifications";
+import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
 
@@ -12,7 +14,7 @@ interface Job {
   _id: string;
   title: string;
   description?: string;
-  qualification?: string;
+  qualification?: string[];
   openDate?: string;
   closeDate?: string;
   category?: string;
@@ -28,6 +30,7 @@ const JobPage: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [qualificationFilter, setQualificationFilter] = useState<string[]>([]);
   const [positionType, setPositionType] = useState("");
   const [paymentType, setPaymentType] = useState("");
   const [location, setLocation] = useState(() => getUser()?.location || "");
@@ -46,6 +49,7 @@ const JobPage: React.FC = () => {
       if (positionType) url.searchParams.append("positionType", positionType);
       if (paymentType) url.searchParams.append("paymentType", paymentType);
       if (location) url.searchParams.append("location", location);
+      if (qualificationFilter.length > 0) url.searchParams.append("qualification", qualificationFilter.join(","));
 
       const res = await fetch(url.toString(), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -60,7 +64,7 @@ const JobPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, positionType, paymentType, location]);
+  }, [searchTerm, positionType, paymentType, location, qualificationFilter]);
 
   useEffect(() => {
     fetchJobs();
@@ -115,7 +119,7 @@ const JobPage: React.FC = () => {
         </p>
       </div>
 
-      <div className="max-w-6xl mx-auto mb-6 flex flex-wrap gap-3 justify-center">
+      <div className="max-w-7xl mx-auto mb-6 flex flex-wrap gap-3 justify-center">
         <input
           type="text"
           placeholder="Search jobs..."
@@ -123,6 +127,16 @@ const JobPage: React.FC = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="border rounded-lg px-3 py-2 w-full sm:w-64"
         />
+
+        <div className="w-full sm:w-80">
+          <MultiSelectDropdown
+            options={ALL_QUALIFICATION_OPTIONS}
+            selectedValues={qualificationFilter}
+            onChange={setQualificationFilter}
+            placeholder="All Qualifications"
+          />
+        </div>
+
         <select
           value={positionType}
           onChange={(e) => setPositionType(e.target.value)}
@@ -163,6 +177,7 @@ const JobPage: React.FC = () => {
         <button
           onClick={() => {
             setSearchTerm("");
+            setQualificationFilter([]);
             setPositionType("");
             setPaymentType("");
             setLocation("");
@@ -173,8 +188,15 @@ const JobPage: React.FC = () => {
         </button>
       </div>
 
+      {/* ===== Filtering Logic ===== */}
+      {/* Client-side filtering for qualification */}
       {/* ===== Job Cards ===== */}
-      {jobs.length > 0 ? (
+      {jobs.filter((job) => {
+        const matchesQualification = qualificationFilter.length > 0
+          ? qualificationFilter.some((q) => job.qualification && job.qualification.includes(q))
+          : true;
+        return matchesQualification;
+      }).length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {jobs.map((job) => (
             <Card
@@ -204,7 +226,7 @@ const JobPage: React.FC = () => {
                   )}
                   {job.location && (
                     <p className="text-sm text-gray-600 mb-1">
-                      Location: {job.location}
+                      <strong>District:</strong> {job.location}
                     </p>
                   )}
                   {job.openDate && (
@@ -213,8 +235,13 @@ const JobPage: React.FC = () => {
                     </p>
                   )}
                   {job.closeDate && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 mb-1">
                       Closes: {new Date(job.closeDate).toLocaleDateString()}
+                    </p>
+                  )}
+                  {job.qualification && job.qualification.length > 0 && (
+                    <p className="text-sm text-gray-500">
+                      Qualifications: {job.qualification.join(", ")}
                     </p>
                   )}
                 </div>
