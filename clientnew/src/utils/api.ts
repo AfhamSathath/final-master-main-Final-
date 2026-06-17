@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 
-// ✅ Create a reusable Axios instance
+//  Create a reusable Axios instance
 const api: AxiosInstance = axios.create({
   baseURL: "http://localhost:5000", // Backend URL
   withCredentials: true, // Include cookies if backend uses them
@@ -9,7 +9,7 @@ const api: AxiosInstance = axios.create({
   },
 });
 
-// ✅ Request interceptor to attach token
+//  Request interceptor to attach token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token"); // Get token from localStorage
@@ -21,7 +21,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ Response interceptor to handle errors globally
+//  Response interceptor to handle errors globally
 api.interceptors.response.use(
   (response) => response, // Pass through successful responses
   (error) => {
@@ -35,12 +35,11 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-// ✅ Optional utility: fetch data with type safety
+//  Optional utility: fetch data with type safety
 export const fetchData = async <T>(url: string): Promise<T> => {
   const response = await api.get<T>(url);
   return response.data;
 };
 
-// ✅ Default export
+
 export default api;

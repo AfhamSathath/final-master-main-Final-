@@ -21,10 +21,12 @@ type Stats = {
 };
 
 const Reports: React.FC = () => {
-  const { data: users = [] } = useQuery({ queryKey: ["admin-users-list"], queryFn: async () => (await axios.get("http://localhost:5000/api/users")).data });
-  const { data: companies = [] } = useQuery({ queryKey: ["admin-companies-list"], queryFn: async () => (await axios.get("http://localhost:5000/api/companies")).data });
-  const { data: jobs = [] } = useQuery({ queryKey: ["admin-jobs-list"], queryFn: async () => (await axios.get("http://localhost:5000/api/jobs")).data });
-  const { data: courses = [] } = useQuery({ queryKey: ["admin-courses-list"], queryFn: async () => (await axios.get("http://localhost:5000/api/courses")).data });
+  const token = localStorage.getItem("token");
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const { data: users = [] } = useQuery({ queryKey: ["admin-users-list"], queryFn: async () => (await axios.get("http://localhost:5000/api/users", config)).data });
+  const { data: companies = [] } = useQuery({ queryKey: ["admin-companies-list"], queryFn: async () => (await axios.get("http://localhost:5000/api/companies", config)).data });
+  const { data: jobs = [] } = useQuery({ queryKey: ["admin-jobs-list"], queryFn: async () => (await axios.get("http://localhost:5000/api/jobs", config)).data });
+  const { data: courses = [] } = useQuery({ queryKey: ["admin-courses-list"], queryFn: async () => (await axios.get("http://localhost:5000/api/courses", config)).data });
 
   const stats: Stats = {
     users: users.length,

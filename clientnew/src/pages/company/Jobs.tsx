@@ -9,11 +9,11 @@ import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
 import { QUALIFICATION_OPTIONS, ALL_QUALIFICATION_OPTIONS } from "@/constants/qualifications";
 import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 
-// ================== HELPER FUNCTION ==================
+
 const LinkifyText = ({ text }: { text: string }) => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRegex);
-  
+
   return (
     <span>
       {parts.map((part, index) => {
@@ -36,7 +36,7 @@ const LinkifyText = ({ text }: { text: string }) => {
   );
 };
 
-// ================== TYPES ==================
+
 export type Job = {
   _id: string;
   title: string;
@@ -49,7 +49,7 @@ export type Job = {
   positionType?: "full-time" | "part-time" | "internship";
   paymentType?: "paid" | "unpaid";
   location?: string;
-  approvalStatus?: "pending" | "approved" | "rejected";
+
   rejectionReason?: string;
 };
 
@@ -62,13 +62,13 @@ type CompanyProfile = {
 
 type NewJob = Omit<Job, "_id">;
 
-// ================== CONSTANTS ==================
+
 const API_BASE = "http://localhost:5000/api/jobs";
 const POSITION_TYPE_OPTIONS = ["full-time", "part-time", "internship"];
 const PAYMENT_TYPE_OPTIONS = ["paid", "unpaid"];
 
 const CATEGORY_OPTIONS = [
-  "Information Technology", 
+  "Information Technology",
   "Business & Management",
   "Engineering",
   "Digital Marketing",
@@ -95,12 +95,12 @@ const fetchJobs = async (): Promise<Job[]> => {
 };
 
 const fetchProfile = async (): Promise<CompanyProfile> => {
-    const token = localStorage.getItem("token");
-    const res = await axios.get("http://localhost:5000/api/companies/me/profile", {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return res.data;
-  };
+  const token = localStorage.getItem("token");
+  const res = await axios.get("http://localhost:5000/api/companies/me/profile", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data;
+};
 
 const createJob = async (newJob: NewJob) => {
   const token = localStorage.getItem("token");
@@ -125,7 +125,7 @@ const deleteJob = async (id: string) => {
   });
 };
 
-// ================== COMPONENT ==================
+
 const CompanyJobsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const user = getUser();
@@ -144,7 +144,7 @@ const CompanyJobsPage: React.FC = () => {
     positionType: "full-time",
     paymentType: "paid",
     location: "",
-    approvalStatus: "pending",
+
   });
   const [filterCategory, setFilterCategory] = useState("");
   const [filterPositionType, setFilterPositionType] = useState("");
@@ -317,15 +317,14 @@ const CompanyJobsPage: React.FC = () => {
               category: "",
               positionType: "full-time",
               paymentType: "paid",
-              approvalStatus: "pending",
+
             });
           }}
           disabled={!isVerified}
-          className={`${
-            isVerified 
-            ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg transition-transform hover:scale-105" 
+          className={`${isVerified
+            ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg transition-transform hover:scale-105"
             : "bg-gray-400 cursor-not-allowed opacity-70"
-          } text-white px-5 py-3 rounded-xl font-medium shadow-md flex items-center gap-2`}
+            } text-white px-5 py-3 rounded-xl font-medium shadow-md flex items-center gap-2`}
         >
           <PlusCircle className="w-5 h-5" /> Add Job
         </button>
@@ -346,7 +345,7 @@ const CompanyJobsPage: React.FC = () => {
               </h3>
               <div className="mt-2 text-sm text-amber-700">
                 <p>
-                  {profile.verificationStatus === "pending" 
+                  {profile.verificationStatus === "pending"
                     ? "Your account is currently waiting for admin verification. You can view your jobs once they are approved, but you cannot post new ones yet."
                     : `Your account verification was rejected. Reason: ${profile.rejectionReason || "None provided"}. Please contact support.`}
                 </p>
@@ -369,9 +368,8 @@ const CompanyJobsPage: React.FC = () => {
               <div className="flex justify-between items-start mb-3">
                 <h2 className="text-xl font-semibold text-gray-800">{job.title}</h2>
                 <span
-                  className={`text-xs px-2 py-1 rounded-full font-semibold ${
-                    CATEGORY_COLORS[job.category || ""] || "bg-gray-100 text-gray-800"
-                  }`}
+                  className={`text-xs px-2 py-1 rounded-full font-semibold ${CATEGORY_COLORS[job.category || ""] || "bg-gray-100 text-gray-800"
+                    }`}
                 >
                   {job.category || ""}
                 </span>
@@ -424,18 +422,8 @@ const CompanyJobsPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2 pt-2">
-                  <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase ${
-                    job.approvalStatus === "approved" ? "bg-green-100 text-green-700" :
-                    job.approvalStatus === "rejected" ? "bg-red-100 text-red-700" :
-                    "bg-amber-100 text-amber-700"
-                  }`}>
-                    {job.approvalStatus}
-                  </span>
-                  {job.approvalStatus === "rejected" && job.rejectionReason && (
-                    <span className="text-[10px] text-red-500 italic truncate max-w-[150px]" title={job.rejectionReason}>
-                      Reason: {job.rejectionReason}
-                    </span>
-                  )}
+
+
                 </div>
               </div>
 
@@ -459,7 +447,7 @@ const CompanyJobsPage: React.FC = () => {
                       positionType: job.positionType || "full-time",
                       paymentType: job.paymentType || "paid",
                       location: job.location || "",
-                      approvalStatus: job.approvalStatus,
+
                     });
                     setShowForm(true);
                   }}

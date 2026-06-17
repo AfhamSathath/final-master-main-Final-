@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useAuth } from './useAuth'; // Make sure this path is correct
+import { useAuth } from './useAuth';
 
 export const useNotificationCount = () => {
-  const { user } = useAuth(); // Now properly imported
+  const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [error, setError] = useState(null);
 
@@ -30,7 +30,7 @@ export const useNotificationCount = () => {
 
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 60000); // Refresh every minute
-    
+
     return () => clearInterval(interval);
   }, [user]); // Re-run when user changes
 

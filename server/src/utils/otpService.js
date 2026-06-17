@@ -403,7 +403,8 @@ export async function sendCompanyActionAlert(toEmail, companyName, entityType, a
   const themes = {
     Created: "been successfully created",
     Updated: "been successfully updated",
-    Deleted: "been removed"
+    Deleted: "been removed",
+    "Created (Pending Approval)": "been posted and is pending administrative approval"
   };
   const verbPhrase = themes[action] || "been processed";
 
@@ -723,6 +724,32 @@ export async function sendAccountStatusAlert(toEmail, recipientName, status, rea
   } else {
     message += `Your account has been **DELETED** from our platform. All of your personal data and associated records have been purged from our system as per security protocols.`;
   }
+
+  return await sendWorkflowEmail(toEmail, recipientName, subject, message);
+}
+
+/**
+ * Send Email Unsubscribe Confirmation
+ */
+export async function sendUnsubscribeConfirmation(toEmail, recipientName) {
+  const subject = "Email Unsubscription Confirmation";
+  let message = `Hello **${recipientName}**,\n\n`;
+  message += `You have successfully unsubscribed from email notifications.\n\n`;
+  message += `You will no longer receive alerts for new jobs or courses matching your profile. You can still log in to the platform at any time to view opportunities.\n\n`;
+  message += `If this was a mistake, you can re-enable email notifications from your Profile settings.`;
+
+  return await sendWorkflowEmail(toEmail, recipientName, subject, message);
+}
+
+/**
+ * Send Email Subscribe Confirmation
+ */
+export async function sendSubscribeConfirmation(toEmail, recipientName) {
+  const subject = "Email Subscription Activated";
+  let message = `Hello **${recipientName}**,\n\n`;
+  message += `You have successfully subscribed to email notifications.\n\n`;
+  message += `You will now receive alerts for new jobs and courses matching your profile directly in your inbox.\n\n`;
+  message += `If you wish to manage your preferences or unsubscribe, you can do so at any time from your Profile settings.`;
 
   return await sendWorkflowEmail(toEmail, recipientName, subject, message);
 }

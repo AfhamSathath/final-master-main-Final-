@@ -7,6 +7,7 @@ import crypto from "crypto";
 import nodemailer from "nodemailer";
 import generateToken from "../src/utils/generateToken.js";
 import { transporter, generateOTP, sendWorkflowEmail, sendOTP, sendMagicLink, sendAccountCreatedAlert, sendLoginAlert, sendAdminNewCompanyNotification, sendPasswordResetLink } from "../src/utils/otpService.js";
+import { io } from "../src/utils/socketManager.js";
 
 
 import OTP from "../models/OTP.js";
@@ -221,9 +222,9 @@ export const magicLogin = async (req, res) => {
     const normalizedEmail = email.toLowerCase().trim();
 
     const account =
-      (await User.findOne({ email: normalizedEmail, magicToken: token, magicTokenExpiry: { $gt: Date.now() } })) ||
-      (await Company.findOne({ email: normalizedEmail, magicToken: token, magicTokenExpiry: { $gt: Date.now() } })) ||
-      (await Admin.findOne({ email: normalizedEmail, magicToken: token, magicTokenExpiry: { $gt: Date.now() } }));
+      (await User.findOne({ email: normalizedEmail, magicToken: token, magicTokenExpiry: { $gt: new Date() } })) ||
+      (await Company.findOne({ email: normalizedEmail, magicToken: token, magicTokenExpiry: { $gt: new Date() } })) ||
+      (await Admin.findOne({ email: normalizedEmail, magicToken: token, magicTokenExpiry: { $gt: new Date() } }));
 
     if (!account) {
       return res.status(401).json({ message: "Invalid or expired login link" });
@@ -246,6 +247,19 @@ export const magicLogin = async (req, res) => {
     // Async alert
     sendLoginAlert(account.email, account.name).catch(console.error);
 
+    // Emit socket event to notify other tabs (like the original login page)
+    const authToken = generateToken(account._id, account.role);
+    if (io) {
+      console.log(`📡 [Magic Login] Broadcasting magic-link-verified to room: ${normalizedEmail}`);
+      io.to(normalizedEmail).emit("magic-link-verified", {
+        token: authToken,
+        _id: account._id,
+        name: account.name,
+        email: account.email,
+        role: account.role,
+      });
+    }
+
     return res.json({
       success: true,
       message: "Authentication successful!",
@@ -253,7 +267,7 @@ export const magicLogin = async (req, res) => {
       name: account.name,
       email: account.email,
       role: account.role,
-      token: generateToken(account._id, account.role),
+      token: authToken,
     });
   } catch (error) {
     console.error("Magic login error:", error);
@@ -353,9 +367,9 @@ export const resetPassword = async (req, res) => {
     }
 
     const user =
-      (await User.findOne({ resetToken: token, resetTokenExpiry: { $gt: Date.now() } })) ||
-      (await Company.findOne({ resetToken: token, resetTokenExpiry: { $gt: Date.now() } })) ||
-      (await Admin.findOne({ resetToken: token, resetTokenExpiry: { $gt: Date.now() } }));
+      (await User.findOne({ resetToken: token, resetTokenExpiry: { $gt: new Date() } })) ||
+      (await Company.findOne({ resetToken: token, resetTokenExpiry: { $gt: new Date() } })) ||
+      (await Admin.findOne({ resetToken: token, resetTokenExpiry: { $gt: new Date() } }));
 
     if (!user) return res.status(400).json({ message: "Invalid or expired token" });
 

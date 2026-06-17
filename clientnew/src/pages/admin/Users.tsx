@@ -301,12 +301,6 @@ const Users: React.FC = () => {
               {formData.role === "company" && <td className="p-2">{user.regNumber || "-"}</td>}
               <td className="p-2 text-center">
                 <button
-                  onClick={() => handleEdit(user)}
-                  className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 mr-2"
-                >
-                  Edit
-                </button>
-                <button
                   onClick={() => handleDelete(user)}
                   className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
                 >

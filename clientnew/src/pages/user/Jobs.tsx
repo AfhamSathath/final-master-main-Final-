@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Loader2, Search } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import toast, { Toaster } from "react-hot-toast";
@@ -52,10 +53,53 @@ const JobPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [qualificationFilter, setQualificationFilter] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [locationFilter, setLocationFilter] = useState(() => getUser()?.location || "");
+  const [locationFilter, setLocationFilter] = useState("");
   const [jobTypeFilter, setJobTypeFilter] = useState("");
   const [paymentTypeFilter, setPaymentTypeFilter] = useState("");
   const [loading, setLoading] = useState(true);
+  const [appliedJobIds, setAppliedJobIds] = useState<string[]>(() => {
+    try {
+      const user = getUser();
+      const userId = user?._id || "guest";
+      const stored = localStorage.getItem(`appliedJobIds_${userId}`);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const handleApply = async (jobId: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Please log in to apply");
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/jobs/${jobId}/apply`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.message || "Failed to apply");
+      }
+
+      const updated = [...appliedJobIds, jobId];
+      setAppliedJobIds(updated);
+      const user = getUser();
+      const userId = user?._id || "guest";
+      localStorage.setItem(`appliedJobIds_${userId}`, JSON.stringify(updated));
+      toast.success("✅ Application submitted successfully!");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to submit application");
+    }
+  };
 
   const API_BASE_URL = "http://localhost:5000/api/jobs";
 
@@ -70,9 +114,12 @@ const JobPage: React.FC = () => {
     const token = localStorage.getItem("token");
 
     try {
-      const res = await fetch(API_BASE_URL, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const res = await fetch(API_BASE_URL, { headers });
       if (!res.ok) throw new Error("Failed to fetch jobs");
       const data: Job[] = await res.json();
       setJobs(data);
@@ -112,8 +159,13 @@ const JobPage: React.FC = () => {
     const matchCategory =
       selectedCategory === "All" || jobCategory === selectedCategory;
 
+    const selectedLocation = locationFilter.trim().toLowerCase();
+    const jobLocation = (job.location || "").trim().toLowerCase();
     const matchesLocation =
-      !locationFilter || (job.location || "").toLowerCase() === locationFilter.toLowerCase();
+      !selectedLocation ||
+      jobLocation === selectedLocation ||
+      jobLocation.includes(selectedLocation) ||
+      selectedLocation.includes(jobLocation);
 
     const companyName = getCompanyName(job.company).toLowerCase();
     const query = searchTerm.toLowerCase();
@@ -302,7 +354,7 @@ const JobPage: React.FC = () => {
                     : "N/A"}
                 </div>
 
-                <div className="bg-purple-50 border-l-4 border-purple-400 p-3 rounded-md text-sm text-gray-700">
+                <div className="bg-purple-50 border-l-4 border-purple-400 p-3 rounded-md text-sm text-gray-700 mb-4">
                   <strong className="text-purple-700">Description:</strong>{" "}
                   <span>
                     <Linkify
@@ -321,6 +373,21 @@ const JobPage: React.FC = () => {
                       {job.description || "No description available."}
                     </Linkify>
                   </span>
+                </div>
+
+                <div className="mt-4">
+                  {appliedJobIds.includes(job._id) ? (
+                    <Button disabled className="w-full bg-slate-300 text-slate-500 cursor-not-allowed">
+                      Applied Successfully
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => handleApply(job._id)}
+                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-md transition-all duration-300 hover:scale-[1.02]"
+                    >
+                      Apply Now
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

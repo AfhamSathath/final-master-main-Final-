@@ -1,28 +1,34 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
 
-/**
- * MagicLogin Page
- * Handles the "It's Me" one-click login from email.
- * Environment-ready for QJC.
- */
+
+const requestedTokens = new Set<string>();
+
+
 const MagicLogin: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const token = searchParams.get("token");
   const email = searchParams.get("email");
+  const started = useRef(false);
 
   useEffect(() => {
-    const handleMagicLogin = async () => {
-      if (!token || !email) {
-        toast.error("Invalid login link.");
-        navigate("/login");
-        return;
-      }
+    if (!token || !email) {
+      toast.error("Invalid login link.");
+      navigate("/login");
+      return;
+    }
 
+    if (started.current || requestedTokens.has(token)) {
+      return;
+    }
+    started.current = true;
+    requestedTokens.add(token);
+
+    const handleMagicLogin = async () => {
       try {
         const response = await axios.get(
           `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/api/auth/magic-login`,

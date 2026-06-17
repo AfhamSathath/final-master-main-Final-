@@ -1,7 +1,7 @@
-// frontend/src/utils/Auth.ts
+
 
 // ========================
-// 🔒 TYPES
+//  TYPES
 // ========================
 export interface IUser {
   _id: string;
@@ -32,7 +32,7 @@ export interface IJob {
 }
 
 // ========================
-// 🔒 LOCAL STORAGE HELPERS
+//  LOCAL STORAGE HELPERS
 // ========================
 const setItem = (key: string, value: any) => localStorage.setItem(key, JSON.stringify(value));
 const getItem = <T>(key: string): T | null => {
@@ -42,42 +42,42 @@ const getItem = <T>(key: string): T | null => {
 const removeItem = (key: string) => localStorage.removeItem(key);
 
 // ========================
-// 🔑 TOKEN MANAGEMENT
+//  TOKEN MANAGEMENT
 // ========================
 export const setToken = (token: string) => localStorage.setItem("token", token);
 export const getToken = (): string | null => localStorage.getItem("token");
 export const removeToken = () => localStorage.removeItem("token");
 
 // ========================
-// 👤 USER MANAGEMENT
+//  USER MANAGEMENT
 // ========================
 export const setUser = (user: IUser) => setItem("user", user);
 export const getUser = (): IUser | null => getItem<IUser>("user");
 export const removeUser = () => removeItem("user");
 
 // ========================
-// 🏢 COMPANY MANAGEMENT
+//  COMPANY MANAGEMENT
 // ========================
 export const setCompany = (company: ICompany) => setItem("company", company);
 export const getCompany = (): ICompany | null => getItem<ICompany>("company");
 export const removeCompany = () => removeItem("company");
 
 // ========================
-// 🎓 COURSE MANAGEMENT
+//  COURSE MANAGEMENT
 // ========================
 export const setCourse = (course: ICourse) => setItem("course", course);
 export const getCourse = (): ICourse | null => getItem<ICourse>("course");
 export const removeCourse = () => removeItem("course");
 
 // ========================
-// 💼 JOB MANAGEMENT
+//  JOB MANAGEMENT
 // ========================
 export const setJob = (job: IJob) => setItem("job", job);
 export const getJob = (): IJob | null => getItem<IJob>("job");
 export const removeJob = () => removeItem("job");
 
 // ========================
-// ✅ AUTHENTICATION HELPERS
+//  AUTHENTICATION HELPERS
 // ========================
 export const isAuthenticated = (): boolean => !!getToken() && !!getUser();
 
@@ -90,7 +90,7 @@ export const logout = () => {
 };
 
 // ========================
-// 🌐 API HELPERS
+//  API HELPERS
 // ========================
 const API_BASE = "http://localhost:5000";
 
@@ -108,7 +108,7 @@ export const fetchCurrentUser = async (): Promise<IUser> => {
 };
 
 // ========================
-// 🔄 GENERIC UPDATE HELPERS
+//  GENERIC UPDATE HELPERS
 // ========================
 const updateItem = <T>(key: string, updatedData: Partial<T>): T | null => {
   const current = getItem<T>(key);

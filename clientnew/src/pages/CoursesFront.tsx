@@ -89,14 +89,8 @@ const CoursePage: React.FC = () => {
   }, []);
 
   // ✅ Handle "More Details" Click
-  const handleMoreDetailsClick = (courseId: string) => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      toast.error("Please register or log in to view course details.");
-      setTimeout(() => navigate("/register"), 1000);
-    } else {
-      navigate(`/courses/${courseId}`);
-    }
+  const handleMoreDetailsClick = (_id: string) => {
+    navigate("/register");
   };
 
   if (loading)
@@ -207,7 +201,7 @@ const CoursePage: React.FC = () => {
                   <h2 className="text-xl font-bold text-gray-800 mb-2 line-clamp-1">
                     {course.name || "Untitled Course"}
                   </h2>
-                
+
 
                   {course.category && (
                     <p className="text-sm text-gray-600 mb-1">

@@ -1,4 +1,8 @@
 import Company from "../models/Company.js";
+import Application from "../models/Application.js";
+import User from "../models/User.js";
+import Job from "../models/job.js";
+import Course from "../models/Course.js";
 import bcrypt from "bcryptjs";
 import generateToken from "../src/utils/generateToken.js";
 import { sendWorkflowEmail, sendAdminNewCompanyNotification, sendProfileUpdatedAlert } from "../src/utils/otpService.js";
@@ -49,6 +53,8 @@ export const createCompany = async (req, res) => {
   try {
     const { name, location, email, contactNumber, regNumber, password, address } = req.body;
 
+    const normalizedEmail = email?.toLowerCase().trim();
+
     // basic required fields check
     if (!name || !email || !contactNumber || !regNumber || !password || !location) {
       if (req.files?.logo?.[0]?.path) safeUnlink(req.files.logo[0].path);
@@ -57,7 +63,7 @@ export const createCompany = async (req, res) => {
     }
 
     const duplicateCompany = await Company.findOne({
-      $or: [{ email }, { contactNumber }, { regNumber }, { name }],
+      $or: [{ email: normalizedEmail }, { contactNumber }, { regNumber }, { name }],
     });
 
     if (duplicateCompany) {
@@ -99,7 +105,7 @@ export const createCompany = async (req, res) => {
       name,
       location,
       address,
-      email,
+      email: normalizedEmail,
       contactNumber,
       regNumber,
       password: hashedPassword,
@@ -206,6 +212,11 @@ export const deleteCompany = async (req, res) => {
   try {
     const company = await Company.findByIdAndDelete(req.params.id);
     if (!company) return res.status(404).json({ message: "Company not found" });
+
+    // Also delete associated jobs and courses
+    await Job.deleteMany({ company: company.name });
+    await Course.deleteMany({ institution: company.name });
+
     res.status(200).json({ message: "Company deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error deleting company", error: error.message });
@@ -257,8 +268,30 @@ export const deleteMyCompany = async (req, res) => {
   try {
     const company = await Company.findByIdAndDelete(req.user.id);
     if (!company) return res.status(404).json({ message: "Company not found" });
+
+    // Also delete associated jobs and courses
+    await Job.deleteMany({ company: company.name });
+    await Course.deleteMany({ institution: company.name });
+
     res.status(200).json({ message: "Company deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error deleting company", error: error.message });
+  }
+};
+
+// ================== GET LOGGED-IN COMPANY APPLICATIONS ==================
+export const getMyCompanyApplications = async (req, res) => {
+  try {
+    const company = await Company.findById(req.user.id);
+    if (!company) return res.status(404).json({ message: "Company not found" });
+
+    const applications = await Application.find({ companyName: company.name })
+      .populate("jobId")
+      .populate("userId", "name email qualification qualificationCategory contactNumber location")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(applications);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching company applications", error: error.message });
   }
 };

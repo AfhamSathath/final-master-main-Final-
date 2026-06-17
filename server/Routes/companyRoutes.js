@@ -8,6 +8,7 @@ import {
   getCompanyProfile,
   updateMyCompany,
   deleteMyCompany,
+  getMyCompanyApplications,
 } from "../Controllers/CompanyController.js";
 import authMiddleware from "../src/middlewares/authMiddleware.js";
 import upload from "../src/utils/multerMiddleware.js";
@@ -28,5 +29,8 @@ router.delete("/:id", deleteCompany);
 router.get("/me/profile", authMiddleware, getCompanyProfile);
 router.put("/me/profile", authMiddleware, updateMyCompany);
 router.delete("/me/profile", authMiddleware, deleteMyCompany);
+
+// Applications route
+router.get("/me/applications", authMiddleware, getMyCompanyApplications);
 
 export default router;

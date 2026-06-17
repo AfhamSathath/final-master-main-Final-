@@ -265,24 +265,55 @@ const CompanyProfile: React.FC = () => {
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-8 pt-6 border-t border-slate-100">
-                  {(["contactNumber", "location"] as (keyof Company)[]).map((field) => (
-                    <div className="flex flex-col gap-2" key={field}>
-                      <label className="text-xs font-black text-indigo-600 uppercase tracking-widest ml-1">
-                        {field === "contactNumber" ? "Corporate Contact" : "Main Operation Base"}
-                      </label>
+                  {/* Corporate Contact */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-black text-indigo-600 uppercase tracking-widest ml-1">
+                      Corporate Contact
+                    </label>
+                    <Input
+                      value={isEditing ? editedCompany.contactNumber : company.contactNumber}
+                      readOnly={!isEditing}
+                      onChange={(e) => handleChange("contactNumber", e.target.value)}
+                      placeholder="Enter contactNumber"
+                      className={`h-12 rounded-xl font-bold transition-all duration-300 ${
+                        isEditing 
+                        ? "border-indigo-400 ring-4 ring-indigo-50 bg-white" 
+                        : "bg-slate-50 border-slate-200 text-slate-600 cursor-not-allowed shadow-inner"
+                      }`}
+                    />
+                  </div>
+
+                  {/* Main Operation Base */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-black text-indigo-600 uppercase tracking-widest ml-1">
+                      Main Operation Base
+                    </label>
+                    {isEditing ? (
+                      <select
+                        value={editedCompany.location || ""}
+                        onChange={(e) => handleChange("location", e.target.value)}
+                        className="h-12 rounded-xl font-bold transition-all duration-300 border-indigo-400 ring-4 ring-indigo-50 bg-white border px-3 py-2 text-sm focus-visible:outline-none"
+                      >
+                        <option value="" disabled>Select District</option>
+                        {[
+                          "Ampara", "Anuradhapura", "Badulla", "Batticaloa", "Colombo", "Galle", 
+                          "Gampaha", "Hambantota", "Jaffna", "Kalutara", "Kandy", "Kegalle", 
+                          "Kilinochchi", "Kurunegala", "Mannar", "Matale", "Matara", "Monaragala", 
+                          "Mullaitivu", "Nuwara Eliya", "Polonnaruwa", "Puttalam", "Ratnapura", 
+                          "Trincomalee", "Vavuniya"
+                        ].map((district) => (
+                          <option key={district} value={district}>{district}</option>
+                        ))}
+                      </select>
+                    ) : (
                       <Input
-                        value={isEditing ? editedCompany[field] : company[field]}
-                        readOnly={!isEditing}
-                        onChange={(e) => handleChange(field, e.target.value)}
-                        placeholder={`Enter ${field}`}
-                        className={`h-12 rounded-xl font-bold transition-all duration-300 ${
-                          isEditing 
-                          ? "border-indigo-400 ring-4 ring-indigo-50 bg-white" 
-                          : "bg-slate-50 border-slate-200 text-slate-600 cursor-not-allowed shadow-inner"
-                        }`}
+                        value={company.location}
+                        readOnly={true}
+                        placeholder="Enter location"
+                        className="h-12 rounded-xl font-bold transition-all duration-300 bg-slate-50 border-slate-200 text-slate-600 cursor-not-allowed shadow-inner"
                       />
-                    </div>
-                  ))}
+                    )}
+                  </div>
                 </div>
 
                 {isEditing && <button type="submit" className="hidden"></button>}

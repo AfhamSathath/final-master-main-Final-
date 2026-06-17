@@ -15,6 +15,7 @@ interface UserProfile {
   email: string;
   contactNumber?: string;
   location?: string;
+  emailNotifications?: boolean;
 }
 
 const Profile: React.FC = () => {
@@ -99,6 +100,58 @@ const Profile: React.FC = () => {
     } catch (error) {
       console.error("Failed to save profile", error);
       toast.error("Failed to save profile. Please try again.");
+    }
+  };
+
+  const handleUnsubscribe = async () => {
+    if (!user) return;
+    const token = getToken();
+    if (!token) {
+      toast.error("Session expired. Please log in again.");
+      logout();
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const response = await axios.put(`http://localhost:5000/api/users/${user._id}/unsubscribe`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const updated = response.data.user;
+      setUserState(updated);
+      setEditedUser(updated);
+      setUser(updated);
+      toast.success("✅ Unsubscribed from email notifications successfully.");
+    } catch (error) {
+      console.error("Failed to unsubscribe", error);
+      toast.error("Failed to unsubscribe. Please try again.");
+    }
+  };
+
+  const handleSubscribe = async () => {
+    if (!user) return;
+    const token = getToken();
+    if (!token) {
+      toast.error("Session expired. Please log in again.");
+      logout();
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const response = await axios.put(`http://localhost:5000/api/users/${user._id}/subscribe`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const updated = response.data.user;
+      setUserState(updated);
+      setEditedUser(updated);
+      setUser(updated);
+      toast.success("✅ Subscribed to email notifications successfully.");
+    } catch (error) {
+      console.error("Failed to subscribe", error);
+      toast.error("Failed to subscribe. Please try again.");
     }
   };
 
@@ -188,6 +241,29 @@ const Profile: React.FC = () => {
               <p className="text-sm text-slate-600">
                 Your preferred district will be saved to your account and used to prefill the district filter in jobs and courses.
               </p>
+            </div>
+
+            <div className="rounded-xl bg-white p-4 border border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-slate-700">Email Notifications</h3>
+                  <p className="text-sm text-slate-500">
+                    Receive email alerts for new jobs and courses matching your profile.
+                  </p>
+                </div>
+                {user.emailNotifications !== false ? (
+                  <Button variant="destructive" onClick={handleUnsubscribe}>
+                    Unsubscribe
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-red-500 font-medium">Unsubscribed</span>
+                    <Button variant="outline" className="border-sky-500 text-sky-600 hover:bg-sky-50" onClick={handleSubscribe}>
+                      Subscribe
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {isEditing && (

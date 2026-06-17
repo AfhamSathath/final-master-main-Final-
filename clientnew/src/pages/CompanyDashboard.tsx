@@ -4,11 +4,30 @@ import { getUser, logout, getToken } from "@/utils/Auth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { io, Socket } from "socket.io-client";
 import { toast } from "sonner";
+import axios from "axios";
 
 const CompanyDashboard: React.FC = () => {
   const navigate = useNavigate();
   const user = getUser();
   const [isOpen, setIsOpen] = useState(true);
+  const [applicationsCount, setApplicationsCount] = useState(0);
+
+  const fetchApplicationsCount = async () => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const response = await axios.get("http://localhost:5000/api/companies/me/applications", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setApplicationsCount(response.data.length);
+    } catch (error) {
+      console.error("Failed to load applications count", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchApplicationsCount();
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -24,6 +43,10 @@ const CompanyDashboard: React.FC = () => {
     socket.on("newNotification", (notification: any) => {
        console.log("🔔 New Notification:", notification.title);
        
+       if (notification.title === "New Job Application") {
+         fetchApplicationsCount();
+       }
+
        // ✅ Visual Toast
        toast(notification.title, {
           description: notification.message,
@@ -111,6 +134,20 @@ const CompanyDashboard: React.FC = () => {
               }
             >
               {isOpen ? "View Courses" : "📋"}
+            </NavLink>
+
+            <NavLink
+              to="/company-dashboard/applications"
+              className={({ isActive }) =>
+                (isActive ? activeClass : inactiveClass) + " p-2 rounded flex justify-between items-center"
+              }
+            >
+              <span>{isOpen ? "View Applications" : "📩"}</span>
+              {isOpen && applicationsCount > 0 && (
+                <span className="bg-red-500 text-white font-bold text-xs px-2 py-0.5 rounded-full">
+                  {applicationsCount}
+                </span>
+              )}
             </NavLink>
 
             <button

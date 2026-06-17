@@ -44,23 +44,7 @@ export const QualificationFilter: React.FC = () => {
           ))}
         </div>
 
-        <div className="mt-12 text-center">
-          <p className="text-gray-500 mb-6">Explore more possibilities</p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <button
-              onClick={() => navigate('/jobs')}
-              className="bg-blue-600 text-white px-8 py-3 rounded-xl hover:bg-blue-700 transition font-medium shadow-md hover:shadow-lg"
-            >
-              See All Jobs
-            </button>
-            <button
-              onClick={() => navigate('/courses')}
-              className="bg-white border-2 border-blue-600 text-blue-600 px-8 py-3 rounded-xl hover:bg-blue-50 transition font-medium shadow-sm hover:shadow-md"
-            >
-              See All Courses
-            </button>
-          </div>
-        </div>
+
       </div>
     </section>
   );

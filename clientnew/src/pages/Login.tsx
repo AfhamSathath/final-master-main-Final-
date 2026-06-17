@@ -40,16 +40,16 @@ const Login: React.FC = () => {
   const [loginType, setLoginType] = useState<"otp" | "magic-link">("otp");
   const [magicLinkStatus, setMagicLinkStatus] = useState<"waiting" | "verified" | "error">("waiting");
 
-  // ✅ REAL-TIME Scenario Listener
+  //  REAL-TIME Scenario Listener
   useEffect(() => {
     let socket: any;
     if (step === 2 && loginType === "magic-link") {
       console.log("🔌 Connecting to socket for real-time login...");
       socket = io(API_BASE);
-      
+
       socket.emit("join", emailForOTP.toLowerCase().trim());
-      
-      // ✅ Listen for OTP Sent Confirmation (with sound)
+
+      //  Listen for OTP Sent Confirmation (with sound)
       socket.on("otp-sent", (data: any) => {
         console.log("⚡ [Socket] OTP Sent successfully to:", data.email);
         playAlertSound(); // Trigger sound confirm
@@ -59,7 +59,7 @@ const Login: React.FC = () => {
         console.log("⚡ [Socket] Magic link verified! Logging in...");
         setMagicLinkStatus("verified");
 
-        // ✅ Play Success Alert Sound
+        //  Play Success Alert Sound
         try {
           const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3");
           audio.volume = 0.5;
@@ -67,19 +67,19 @@ const Login: React.FC = () => {
         } catch (err) {
           console.error("Failed to play sound:", err);
         }
-        
+
         setTimeout(async () => {
-           const { token, _id, name, email, role } = data;
-           setToken(token);
+          const { token, _id, name, email, role } = data;
+          setToken(token);
 
-           if (role === "user") {
-             const fullUser = await fetchUserDetails(_id, token);
-             setUser({ ...fullUser, token });
-           } else {
-             setUser({ _id, name, email, role, token });
-           }
+          if (role === "user") {
+            const fullUser = await fetchUserDetails(_id, token);
+            setUser({ ...fullUser, token });
+          } else {
+            setUser({ _id, name, email, role, token });
+          }
 
-           navigate(role === "admin" ? "/admin-dashboard" : role === "company" ? "/company-dashboard" : "/user-dashboard");
+          navigate(role === "admin" ? "/admin-dashboard" : role === "company" ? "/company-dashboard" : "/user-dashboard");
         }, 1500); // 1.5s delay for cool effect
       });
     }
@@ -92,7 +92,7 @@ const Login: React.FC = () => {
     };
   }, [step, loginType, emailForOTP, navigate]);
 
-  // ✅ Play Alert Sound Helper
+  //  Play Alert Sound Helper
   const playAlertSound = (url = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3") => {
     try {
       const audio = new Audio(url);
@@ -117,19 +117,19 @@ const Login: React.FC = () => {
     setError("");
 
     try {
-      // ✅ If using magic link without password, call the new passwordless endpoint
+      //  If using magic link without password, call the new passwordless endpoint
       if (useMagicLink && !formData.password) {
         const magicRes = await axios.post(`${API_BASE}/api/auth/request-magic-link`, {
           email: formData.email
         });
-        
+
         if (magicRes.data.success) {
-           setEmailForOTP(formData.email);
-           setLoginType("magic-link");
-           setStep(2);
-           setMagicLinkStatus("waiting");
-           playAlertSound(); // ✅ Play Sent sound
-           return;
+          setEmailForOTP(formData.email);
+          setLoginType("magic-link");
+          setStep(2);
+          setMagicLinkStatus("waiting");
+          playAlertSound(); //  Play Sent sound
+          return;
         }
       }
 
@@ -141,26 +141,26 @@ const Login: React.FC = () => {
 
       if (loginRes.data.success) {
         if (loginRes.data.token) {
-           // Direct login (otpRequired was false)
-           const { token, _id, name, email, role } = loginRes.data;
-           setToken(token);
+          // Direct login (otpRequired was false)
+          const { token, _id, name, email, role } = loginRes.data;
+          setToken(token);
 
-           if (role === "user") {
-             const fullUser = await fetchUserDetails(_id, token);
-             setUser({ ...fullUser, token });
-           } else {
-             setUser({ _id, name, email, role, token });
-           }
+          if (role === "user") {
+            const fullUser = await fetchUserDetails(_id, token);
+            setUser({ ...fullUser, token });
+          } else {
+            setUser({ _id, name, email, role, token });
+          }
 
-           navigate(role === "admin" ? "/admin-dashboard" : role === "company" ? "/company-dashboard" : "/user-dashboard");
-           return;
+          navigate(role === "admin" ? "/admin-dashboard" : role === "company" ? "/company-dashboard" : "/user-dashboard");
+          return;
         }
 
         setEmailForOTP(formData.email);
         setLoginType(useMagicLink ? "magic-link" : "otp");
         setStep(2);
         if (useMagicLink) setMagicLinkStatus("waiting");
-        playAlertSound(); // ✅ Play Sent sound
+        playAlertSound(); //  Play Sent sound
       } else {
         throw new Error(loginRes.data.message || "Failed to initiate login");
       }
@@ -188,7 +188,7 @@ const Login: React.FC = () => {
         const user = verifyRes.data;
 
         setToken(token);
-        
+
         const userData: User = {
           _id: user._id,
           name: user.name,
@@ -304,11 +304,10 @@ const Login: React.FC = () => {
             </div>
 
             {error && (
-              <div className={`rounded-xl border p-5 mt-6 animate-in fade-in slide-in-from-top-4 duration-300 ${
-                error.includes("pending") || error.includes("rejected") || error.includes("suspended")
-                ? "bg-amber-50 border-amber-200" 
-                : "bg-red-50 border-red-200"
-              }`}>
+              <div className={`rounded-xl border p-5 mt-6 animate-in fade-in slide-in-from-top-4 duration-300 ${error.includes("pending") || error.includes("rejected") || error.includes("suspended")
+                  ? "bg-amber-50 border-amber-200"
+                  : "bg-red-50 border-red-200"
+                }`}>
                 <div className="flex gap-3">
                   <div className="flex-shrink-0 mt-0.5">
                     {error.includes("🏢") || error.includes("pending") ? (
@@ -318,20 +317,18 @@ const Login: React.FC = () => {
                     )}
                   </div>
                   <div>
-                    <h3 className={`text-sm font-bold ${
-                      error.includes("pending") || error.includes("rejected") || error.includes("suspended")
-                      ? "text-amber-900" 
-                      : "text-red-900"
-                    }`}>
-                      {error.includes("pending") ? "Account Verification Required" : 
-                       error.includes("rejected") ? "Account Verification Rejected" : 
-                       error.includes("suspended") ? "Account Suspended" : "Authentication Error"}
+                    <h3 className={`text-sm font-bold ${error.includes("pending") || error.includes("rejected") || error.includes("suspended")
+                        ? "text-amber-900"
+                        : "text-red-900"
+                      }`}>
+                      {error.includes("pending") ? "Account Verification Required" :
+                        error.includes("rejected") ? "Account Verification Rejected" :
+                          error.includes("suspended") ? "Account Suspended" : "Authentication Error"}
                     </h3>
-                    <div className={`mt-1 text-sm ${
-                      error.includes("pending") || error.includes("rejected") || error.includes("suspended")
-                      ? "text-amber-700" 
-                      : "text-red-700"
-                    }`}>
+                    <div className={`mt-1 text-sm ${error.includes("pending") || error.includes("rejected") || error.includes("suspended")
+                        ? "text-amber-700"
+                        : "text-red-700"
+                      }`}>
                       {error}
                     </div>
                   </div>
@@ -347,7 +344,7 @@ const Login: React.FC = () => {
               >
                 {loading ? "Signing in..." : "Sign in"}
               </button>
-              
+
               <button
                 type="button"
                 onClick={(e) => handleLogin(e, true)}
@@ -428,7 +425,7 @@ const Login: React.FC = () => {
                     We've sent a <strong>Magic Login Link</strong> to <br />
                     <span className="text-blue-600 font-semibold">{emailForOTP}</span>
                   </p>
-                  
+
                   <div className="bg-gray-50 p-6 rounded-xl border border-dashed border-gray-200 mb-8 w-full flex flex-col items-center gap-3">
                     <Sparkles className="w-5 h-5 text-yellow-500 animate-pulse" />
                     <p className="text-sm text-gray-600 font-medium italic">

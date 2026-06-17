@@ -22,6 +22,7 @@ import VerifyOtp from "./pages/auth/VerifyOtp";
 import ResetPassword from "./pages/auth/ResetPassword";
 import CoursesFront from "./pages/CoursesFront";
 import JobsFront from "./pages/JobsFront";
+import JobDetails from "./pages/JobDetails.tsx";
 import MagicLogin from "./pages/auth/MagicLogin";
 
 // ===== Dashboards =====
@@ -41,6 +42,7 @@ import Reports from "./pages/admin/Reports";
 import CompanyJobsPage from "./pages/company/Jobs";
 import CompanyCoursesPage from "./pages/company/Courses";
 import CompanyProfile from "./pages/company/Profile"
+import CompanyApplicationsPage from "./pages/company/Applications";
 
 // ===== Auth Utils =====
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -92,6 +94,7 @@ const App: React.FC = () => (
 
           <Route path="/CoursesFront" element={<CoursesFront />} />
           <Route path="/JobsFront" element={<JobsFront />} />
+          <Route path="/jobs/:id" element={<JobDetails />} />
 
           {/* ===== Role-based Redirect ===== */}
           <Route path="/dashboard" element={<RoleBasedRedirect />} />
@@ -128,6 +131,7 @@ const App: React.FC = () => (
             <Route path="courses" element={<CompanyCoursesPage />} />
             <Route path="" element={<Navigate to="jobs" replace />} />
             <Route path="Profile" element={<CompanyProfile />} />
+            <Route path="applications" element={<CompanyApplicationsPage />} />
           </Route>
 
           {/* ===== ADMIN DASHBOARD ===== */}

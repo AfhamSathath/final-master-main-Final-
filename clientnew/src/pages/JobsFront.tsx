@@ -4,15 +4,14 @@ import { Loader2 } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { getUser } from "@/utils/Auth";
-import { QUALIFICATION_OPTIONS, ALL_QUALIFICATION_OPTIONS } from "@/constants/qualifications";
+import { ALL_QUALIFICATION_OPTIONS } from "@/constants/qualifications";
 import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
-
 import { SRI_LANKA_DISTRICTS } from "@/constants/srilankaDistricts";
 
 interface Job {
   _id: string;
   title: string;
+  company?: string;
   description?: string;
   qualification?: string[];
   openDate?: string;
@@ -33,12 +32,11 @@ const JobPage: React.FC = () => {
   const [qualificationFilter, setQualificationFilter] = useState<string[]>([]);
   const [positionType, setPositionType] = useState("");
   const [paymentType, setPaymentType] = useState("");
-  const [location, setLocation] = useState(() => getUser()?.location || "");
+  const [location, setLocation] = useState("");
   const navigate = useNavigate();
 
   const API_BASE_URL = "http://localhost:5000/api/jobs";
 
-  // ✅ Fetch jobs
   const fetchJobs = useCallback(async () => {
     setLoading(true);
     const token = localStorage.getItem("token");
@@ -49,7 +47,6 @@ const JobPage: React.FC = () => {
       if (positionType) url.searchParams.append("positionType", positionType);
       if (paymentType) url.searchParams.append("paymentType", paymentType);
       if (location) url.searchParams.append("location", location);
-      if (qualificationFilter.length > 0) url.searchParams.append("qualification", qualificationFilter.join(","));
 
       const res = await fetch(url.toString(), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -64,13 +61,12 @@ const JobPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, positionType, paymentType, location, qualificationFilter]);
+  }, [searchTerm, positionType, paymentType, location]);
 
   useEffect(() => {
     fetchJobs();
   }, [fetchJobs]);
 
-  // ✅ Real-time updates via Socket.io
   useEffect(() => {
     const token = localStorage.getItem("token");
     const socket: Socket = io("http://localhost:5000", { auth: { token } });
@@ -89,16 +85,41 @@ const JobPage: React.FC = () => {
     };
   }, []);
 
-  // ✅ Handle click on "More Details" button
   const handleMoreDetailsClick = (jobId: string) => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      toast.error("Please register or log in to view job details.");
-      setTimeout(() => navigate("/register"), 1000);
-    } else {
-      navigate(`/jobs/${jobId}`);
-    }
+    navigate("/register");
   };
+
+  const filteredJobs = jobs.filter((job) => {
+    const query = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      query === "" ||
+      job.title.toLowerCase().includes(query) ||
+      (job.company || "").toLowerCase().includes(query) ||
+      (job.category || "").toLowerCase().includes(query) ||
+      (job.description || "").toLowerCase().includes(query);
+
+    const matchesQualification =
+      qualificationFilter.length > 0
+        ? qualificationFilter.some((q) => job.qualification?.includes(q))
+        : true;
+
+    const matchesPositionType =
+      !positionType || (job.positionType || "").toLowerCase() === positionType.toLowerCase();
+
+    const matchesPaymentType =
+      !paymentType || (job.paymentType || "").toLowerCase() === paymentType.toLowerCase();
+
+    const matchesLocation =
+      !location || (job.location || "").toLowerCase() === location.toLowerCase();
+
+    return (
+      matchesSearch &&
+      matchesQualification &&
+      matchesPositionType &&
+      matchesPaymentType &&
+      matchesLocation
+    );
+  });
 
   if (loading)
     return (
@@ -188,17 +209,9 @@ const JobPage: React.FC = () => {
         </button>
       </div>
 
-      {/* ===== Filtering Logic ===== */}
-      {/* Client-side filtering for qualification */}
-      {/* ===== Job Cards ===== */}
-      {jobs.filter((job) => {
-        const matchesQualification = qualificationFilter.length > 0
-          ? qualificationFilter.some((q) => job.qualification && job.qualification.includes(q))
-          : true;
-        return matchesQualification;
-      }).length > 0 ? (
+      {filteredJobs.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {jobs.map((job) => (
+          {filteredJobs.map((job) => (
             <Card
               key={job._id}
               className="border border-blue-100 bg-white shadow-md hover:shadow-2xl transition-all duration-300 rounded-2xl"
@@ -208,6 +221,10 @@ const JobPage: React.FC = () => {
                   <h2 className="text-xl font-bold text-gray-800 mb-2">
                     {job.title}
                   </h2>
+
+                  <p className="text-sm font-medium text-blue-700 bg-blue-100 px-3 py-1 rounded-full inline-block mb-2">
+                    Company: {job.company || "N/A"}
+                  </p>
 
                   {job.category && (
                     <p className="text-sm text-gray-600 mb-1">
@@ -244,6 +261,7 @@ const JobPage: React.FC = () => {
                       Qualifications: {job.qualification.join(", ")}
                     </p>
                   )}
+
                 </div>
 
                 <button

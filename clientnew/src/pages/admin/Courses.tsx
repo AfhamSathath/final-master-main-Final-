@@ -340,25 +340,7 @@ const AdminCoursesPage: React.FC = () => {
               </div>
 
               <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setEditingCourse(course);
-                    setFormData({
-                      name: course.name,
-                      description: course.description,
-                      institution: course.institution,
-                      qualification: course.qualification || [],
-                      duration: course.duration,
-                      category: course.category,
-                      courseType: course.courseType || "full-time",
-                      paymentType: course.paymentType || "paid",
-                    });
-                    setShowForm(true);
-                  }}
-                  className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
-                >
-                  <Edit className="w-4 h-4" /> Edit
-                </button>
+
                 <button
                   onClick={() => deleteMutation.mutate(course._id)}
                   className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"

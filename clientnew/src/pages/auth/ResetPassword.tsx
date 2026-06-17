@@ -6,13 +6,7 @@ import { Button } from "@/components/ui/button";
 import toast, { Toaster } from "react-hot-toast";
 import { Eye, EyeOff, Lock } from "lucide-react";
 
-/**
- * Reset Password Component
- * - Reads email & token from query string
- * - Allows new password entry
- * - Validates password strength
- * - Sends request to backend `/api/auth/reset-password`
- */
+
 
 const ResetPassword: React.FC = () => {
   const navigate = useNavigate();
@@ -20,7 +14,7 @@ const ResetPassword: React.FC = () => {
 
   const queryParams = new URLSearchParams(location.search);
   const email = queryParams.get("email") || "";
-  const token = queryParams.get("token") || ""; // optional if backend uses token
+  const token = queryParams.get("token") || "";
 
   const [password, setPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
@@ -30,7 +24,7 @@ const ResetPassword: React.FC = () => {
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-  // ✅ Validate password (min 8 chars, uppercase, lowercase, number, special char)
+  //  Validate password (min 8 chars, uppercase, lowercase, number, special char)
   const isStrongPassword = (pwd: string) => {
     const regex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;

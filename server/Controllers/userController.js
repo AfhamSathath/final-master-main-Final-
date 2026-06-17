@@ -25,7 +25,7 @@ export const createUser = async (req, res) => {
 
     const newUser = new User({
       name,
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       role,
       qualificationCategory,
@@ -105,5 +105,43 @@ export const deleteUser = async (req, res) => {
     res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error deleting user", error: error.message });
+  }
+};
+
+// ================== UNSUBSCRIBE FROM EMAILS ==================
+export const unsubscribeFromEmails = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.emailNotifications = false;
+    await user.save();
+
+    // Send confirmation
+    const { sendUnsubscribeConfirmation } = await import("../src/utils/otpService.js");
+    await sendUnsubscribeConfirmation(user.email, user.name);
+
+    res.status(200).json({ message: "Unsubscribed successfully", user });
+  } catch (error) {
+    res.status(500).json({ message: "Error unsubscribing", error: error.message });
+  }
+};
+
+// ================== SUBSCRIBE TO EMAILS ==================
+export const subscribeToEmails = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.emailNotifications = true;
+    await user.save();
+
+    // Send confirmation
+    const { sendSubscribeConfirmation } = await import("../src/utils/otpService.js");
+    await sendSubscribeConfirmation(user.email, user.name);
+
+    res.status(200).json({ message: "Subscribed successfully", user });
+  } catch (error) {
+    res.status(500).json({ message: "Error subscribing", error: error.message });
   }
 };

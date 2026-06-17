@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { getUser, logout, getToken } from "@/utils/Auth";
 import { useNavigate } from "react-router-dom";
-import { Users, BookOpen, Briefcase, LogOut, Mail, Calendar, MapPin } from "lucide-react";
+import { Users, BookOpen, Briefcase, LogOut, Mail, Calendar, MapPin, Bell } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const roleColors: Record<string, string> = {
   admin: "bg-red-100 text-red-600",
@@ -160,7 +162,75 @@ const UserDashboard: React.FC = () => {
                 <span className="text-2xl font-bold tracking-tight">CareerLink LK</span>
               </div>
               <div className="flex items-center space-x-4">
-                <span className="text-white font-medium">Hello, {user?.name || "User"}</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" className="relative p-2 text-white hover:bg-white/20">
+                      <Bell className="w-5 h-5" />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0" align="end">
+                    <div className="bg-indigo-50 px-4 py-3 border-b font-semibold flex justify-between items-center text-indigo-700">
+                      <span>Notifications</span>
+                      {unreadCount > 0 && <span className="text-xs bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full">{unreadCount} unread</span>}
+                    </div>
+                    <ScrollArea className="h-[300px]">
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-gray-500">No notifications yet.</div>
+                      ) : (
+                        <ul className="flex flex-col">
+                          {notifications.map((notification) => {
+                            const titleLower = notification.title?.toLowerCase() || "";
+                            const isAlert = titleLower.includes("closing soon") || titleLower.includes("deadline") || titleLower.includes("urgent");
+                            
+                            const bgClass = notification.read
+                              ? "bg-white"
+                              : isAlert
+                              ? "bg-red-50"
+                              : "bg-indigo-50/50";
+
+                            const titleClass = isAlert ? "text-red-700" : "text-gray-900";
+
+                            return (
+                              <li
+                                key={notification._id}
+                                className={`p-4 border-b last:border-b-0 ${bgClass}`}
+                              >
+                                <div className="flex justify-between items-start gap-2">
+                                  <div className="flex-1">
+                                    <p className={`text-sm font-semibold ${titleClass}`}>{notification.title}</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">{new Date(notification.createdAt).toLocaleString()}</p>
+                                    <p className="text-sm text-gray-700 mt-1">{notification.message}</p>
+                                  </div>
+                                  {!notification.read && (
+                                    <button
+                                      onClick={() => markAsRead(notification._id)}
+                                      className="text-xs text-blue-600 hover:text-blue-800 shrink-0 mt-1 whitespace-nowrap font-medium"
+                                    >
+                                      Mark read
+                                    </button>
+                                  )}
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </ScrollArea>
+                  </PopoverContent>
+                </Popover>
+                <span className="text-white font-medium hidden sm:inline-block">Hello, {user?.name || "User"}</span>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate("/profile")}
+                  className="flex items-center gap-2 text-white hover:bg-white/20"
+                >
+                  <Users className="w-4 h-4" /> Profile
+                </Button>
                 <Button
                   variant="ghost"
                   onClick={handleLogout}
@@ -175,125 +245,6 @@ const UserDashboard: React.FC = () => {
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Profile Card */}
-            <Card className="shadow-md hover:shadow-xl transition-shadow border-t-4 border-blue-500">
-              <CardHeader className="bg-blue-50 rounded-t-lg">
-                <CardTitle className="flex items-center text-blue-700">
-                  <Users className="w-5 h-5 mr-2" /> My Profile
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6 space-y-3">
-                <div className="flex items-center space-x-3 p-2 bg-white rounded shadow-sm hover:bg-blue-50 transition-colors">
-                  <Users className="w-5 h-5 text-blue-400" />
-                  <div>
-                    <p className="text-sm text-gray-500">Name</p>
-                    <p className="font-semibold">{user?.name || "N/A"}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3 p-2 bg-white rounded shadow-sm hover:bg-blue-50 transition-colors">
-                  <Mail className="w-5 h-5 text-green-400" />
-                  <div>
-                    <p className="text-sm text-gray-500">Email</p>
-                    <p className="font-semibold">{user?.email || "N/A"}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3 p-2 bg-white rounded shadow-sm hover:bg-blue-50 transition-colors">
-                  <Briefcase className="w-5 h-5 text-purple-400" />
-                  <div>
-                    <p className="text-sm text-gray-500">Role</p>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        roleColors[user?.role || "user"]
-                      }`}
-                    >
-                      {user?.role || "user"}
-                    </span>
-                  </div>
-                </div>
-                {user?.location && (
-                  <div className="flex items-center space-x-3 p-2 bg-white rounded shadow-sm hover:bg-blue-50 transition-colors">
-                    <MapPin className="w-5 h-5 text-teal-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Preferred District</p>
-                      <p className="font-semibold">{user.location}</p>
-                    </div>
-                  </div>
-                )}
-                {user?.createdAt && (
-                  <div className="flex items-center space-x-3 p-2 bg-white rounded shadow-sm hover:bg-blue-50 transition-colors">
-                    <Calendar className="w-5 h-5 text-yellow-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Joined</p>
-                      <p className="font-semibold">{new Date(user.createdAt).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <div className="flex justify-center lg:justify-start">
-              <Button
-                variant="outline"
-                onClick={() => navigate("/profile")}
-                className="mt-4"
-              >
-                Edit District Preferences
-              </Button>
-            </div>
-
-            <Card className="shadow-md hover:shadow-xl transition-shadow border-t-4 border-indigo-500">
-              <CardHeader className="bg-indigo-50 rounded-t-lg">
-                <CardTitle className="flex items-center text-indigo-700">
-                  Notifications ({unreadCount} unread)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                {notifications.length === 0 ? (
-                  <p className="text-sm text-gray-500">No notifications yet.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {notifications.slice(0, 5).map((notification) => {
-                      const titleLower = notification.title?.toLowerCase() || "";
-                      const isAlert = titleLower.includes("closing soon") || titleLower.includes("deadline") || titleLower.includes("urgent");
-                      
-                      const rowClass = notification.read
-                        ? "bg-gray-50"
-                        : isAlert
-                        ? "bg-red-50 border-red-300"
-                        : "bg-white border-indigo-200";
-
-                      const titleClass = isAlert ? "text-red-700" : "text-gray-900";
-
-                      return (
-                        <li
-                          key={notification._id}
-                          className={`p-2 rounded border ${rowClass}`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className={`text-sm font-semibold ${titleClass}`}>{notification.title}</p>
-                              <p className="text-xs text-gray-500">{new Date(notification.createdAt).toLocaleString()}</p>
-                              <p className="text-sm text-gray-700">{notification.message}</p>
-                            </div>
-                            {!notification.read && (
-                              <button
-                                onClick={() => markAsRead(notification._id)}
-                                className="text-xs text-blue-600 hover:underline"
-                              >
-                                Mark read
-                              </button>
-                            )}
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-
-          </div>
 
           {/* Courses & Jobs Row */}
           <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">

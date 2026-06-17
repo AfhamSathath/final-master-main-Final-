@@ -34,7 +34,8 @@ const registerValidationSchema = z
     regNumber: z.string().optional(),
     address: z.string().optional(),
     qualificationCategory: z.union([
-      z.enum(QUALIFICATION_CATEGORIES),
+      // @ts-ignore
+      z.enum(QUALIFICATION_CATEGORIES as any),
       z.literal("")
     ]).optional(),
     qualification: z.array(z.string()).optional(),
@@ -74,7 +75,8 @@ const registerValidationSchema = z
       if (data.userType === "user") {
         return (
           !!data.qualification &&
-          data.qualification.every((q) => ALL_QUALIFICATION_OPTIONS.includes(q))
+          // @ts-ignore
+          data.qualification.every((q) => ALL_QUALIFICATION_OPTIONS.includes(q as any))
         );
       }
       return true;
@@ -88,7 +90,8 @@ const registerValidationSchema = z
     (data) => {
       if (data.userType === "user") {
         const validCategories = QUALIFICATION_CATEGORIES;
-        return !!data.qualificationCategory && validCategories.includes(data.qualificationCategory);
+        // @ts-ignore
+        return !!data.qualificationCategory && validCategories.includes(data.qualificationCategory as any);
       }
       return true;
     },
@@ -225,7 +228,7 @@ const Register: React.FC = () => {
       const res = await axios.post(`${API_BASE}/api/check-duplicate`, payload);
 
       if (res.data.exists) {
-        toast.error("⚠️ Email, phone, or registration number already in use!");
+        toast.error(res.data.message || "⚠️ Email, phone, or registration number already in use!");
         return true;
       }
 

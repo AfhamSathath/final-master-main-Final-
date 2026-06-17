@@ -3,6 +3,7 @@ import Job from "../models/job.js";
 import User from "../models/User.js";
 import Admin from "../models/admin.js";
 import Notification from "../models/Notification.js";
+import Application from "../models/Application.js";
 import nodemailer from "nodemailer";
 import Company from "../models/Company.js";
 
@@ -45,23 +46,22 @@ export const createJob = async (req, res) => {
 
     const savedJob = await newJob.save();
 
-    // ✅ Notify Admins about the new job posting for approval
+    // Notify admins and the company that a new job has been posted.
     const admins = await Admin.find({});
     await Promise.all(
       admins.map((admin) =>
         sendWorkflowEmail(
           admin.email,
           admin.name,
-          "New Job Pending Approval",
-          `A new job has been posted and is waiting for your approval:\n\n**Title:** ${title}\n**Company:** ${company}\n\nPlease review and approve the posting in the admin panel.`
+          "New Job Posted",
+          `A new job has been posted:\n\n**Title:** ${title}\n**Company:** ${company}\n\nReview it in the admin panel if needed.`
         )
       )
     );
 
-    // ✅ Notify the Company that Job was Created and is pending approval
     const companyAccount = await Company.findOne({ name: company });
     if (companyAccount) {
-      await sendCompanyActionAlert(companyAccount.email, companyAccount.name, "Job", "Created (Pending Approval)", title, openDate, closeDate);
+      await sendCompanyActionAlert(companyAccount.email, companyAccount.name, "Job", "Created", title, openDate, closeDate);
     }
 
     res.status(201).json(savedJob);
@@ -73,71 +73,7 @@ export const createJob = async (req, res) => {
 // ================== APPROVE JOB (ADMIN) ==================
 export const approveJob = async (req, res) => {
   try {
-    const job = await Job.findById(req.params.id);
-    if (!job) return res.status(404).json({ message: "Job not found" });
-
-    if (job.approvalStatus === "approved") {
-      return res.status(400).json({ message: "Job is already approved" });
-    }
-
-    job.approvalStatus = "approved";
-    await job.save();
-
-    // ✅ Send notifications to matched users
-    const qualificationMatch = Array.isArray(job.qualification) ? job.qualification : (job.qualification ? [job.qualification] : []);
-    const categoryMatch = job.category && job.category.trim();
-
-    if (qualificationMatch.length > 0 || categoryMatch) {
-      const query = { role: "user", $or: [] };
-      if (qualificationMatch.length > 0) {
-        const regexArray = qualificationMatch.map(q => new RegExp(`^${q.trim()}$`, "i"));
-        query.$or.push({ qualification: { $in: regexArray } });
-      }
-      if (categoryMatch) query.$or.push({ qualificationCategory: { $regex: new RegExp(`^${categoryMatch}$`, "i") } });
-
-      const matchedUsers = await User.find(query);
-
-      const in5Days = new Date();
-      in5Days.setDate(in5Days.getDate() + 5);
-      const jobCloseDate = job.closeDate ? new Date(job.closeDate) : null;
-      const isClosingSoon = jobCloseDate && jobCloseDate <= in5Days;
-
-      // Create In-App Notifications
-      const notifications = matchedUsers.map((user) => ({
-        userId: user._id,
-        type: "job",
-        title: isClosingSoon ? `Job closing soon: ${job.title}` : `🚀 New Job Opportunity: ${job.title}`,
-        message: isClosingSoon
-          ? `Deadline approaching for ${job.title} at ${job.company}. Closes on ${jobCloseDate.toDateString()}.`
-          : `A new ${qualificationMatch.join(', ')} job opening at ${job.company} is now available.`,
-        referenceId: job._id,
-        read: false,
-      }));
-
-      if (notifications.length > 0) {
-        const savedNotifications = await Notification.insertMany(notifications);
-        savedNotifications.forEach(n => emitNotification(n.userId, n));
-      }
-
-      // Send Emails
-      await Promise.all(
-        matchedUsers.map((user) => {
-          if (isClosingSoon) {
-            return sendClosingSoonScenarioAlert(user.email, user.name, "Job Application", job.title, job.company, job.closeDate);
-          } else {
-            return sendJobAlert(user.email, user.name, "Published", job.title, job.company, job.openDate, job.closeDate);
-          }
-        })
-      );
-    }
-
-    // Notify the Company
-    const companyAccount = await Company.findOne({ name: job.company });
-    if (companyAccount) {
-      await sendJobStatusAlert(companyAccount.email, companyAccount.name, job.title, "approved");
-    }
-
-    res.status(200).json({ message: "Job approved and notifications sent", job });
+    res.status(200).json({ message: "Job approval is no longer used. Jobs are visible immediately." });
   } catch (error) {
     res.status(500).json({ message: "Failed to approve job", error: error.message });
   }
@@ -146,21 +82,7 @@ export const approveJob = async (req, res) => {
 // ================== REJECT JOB (ADMIN) ==================
 export const rejectJob = async (req, res) => {
   try {
-    const { reason } = req.body;
-    const job = await Job.findById(req.params.id);
-    if (!job) return res.status(404).json({ message: "Job not found" });
-
-    job.approvalStatus = "rejected";
-    job.rejectionReason = reason || "Does not meet guidelines";
-    await job.save();
-
-    // Notify the Company
-    const companyAccount = await Company.findOne({ name: job.company });
-    if (companyAccount) {
-      await sendJobStatusAlert(companyAccount.email, companyAccount.name, job.title, "rejected", job.rejectionReason);
-    }
-
-    res.status(200).json({ message: "Job rejected", job });
+    res.status(200).json({ message: "Job rejection is no longer used. Jobs are visible immediately." });
   } catch (error) {
     res.status(500).json({ message: "Failed to reject job", error: error.message });
   }
@@ -177,35 +99,28 @@ export const getJobs = async (req, res) => {
     if (category) filter.category = category;
     if (location) filter.location = location;
 
-    // Filter by approvalStatus: default to approved for everyone except admins
-    if (req.user && req.user.role === "admin") {
-      // Admins can filter by status if they want, e.g. ?approvalStatus=pending
-      if (req.query.approvalStatus) {
-        filter.approvalStatus = req.query.approvalStatus;
-      }
-    } else if (req.user && req.user.role === "company") {
-        // Companies can see their own jobs regardless of status
-        filter.$or = [
-            { approvalStatus: "approved" },
-            { company: req.user.name } // Check if the company name matches
-        ];
-    } else {
-      filter.approvalStatus = "approved";
+    const queryParts = [];
+
+    if (Object.keys(filter).length > 0) {
+      queryParts.push(filter);
     }
 
     if (search) {
       const regex = new RegExp(search.toString(), "i");
-      filter.$or = [
-        { title: regex },
-        { description: regex },
-        { company: regex },
-        { category: regex },
-        { qualification: regex },
-        { location: regex },
-      ];
+      queryParts.push({
+        $or: [
+          { title: regex },
+          { description: regex },
+          { company: regex },
+          { category: regex },
+          { qualification: regex },
+          { location: regex },
+        ],
+      });
     }
 
-    const jobs = await Job.find(filter).sort({ createdAt: -1 });
+    const query = queryParts.length === 1 ? queryParts[0] : { $and: queryParts };
+    const jobs = await Job.find(query).sort({ createdAt: -1 });
     res.status(200).json(jobs);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch jobs", error: error.message });
@@ -267,7 +182,7 @@ export const updateJob = async (req, res) => {
       }
 
       await Promise.all(
-        matchedUsers.map((user) => {
+        matchedUsers.filter(u => u.emailNotifications !== false).map((user) => {
           if (isClosingSoon) {
             return sendClosingSoonScenarioAlert(user.email, user.name, "Job Application", updatedJob.title, updatedJob.company, updatedJob.closeDate, true);
           } else {
@@ -309,7 +224,7 @@ export const deleteJob = async (req, res) => {
 
       const matchedUsers = await User.find(query);
       await Promise.all(
-        matchedUsers.map((user) =>
+        matchedUsers.filter(u => u.emailNotifications !== false).map((user) =>
           sendJobAlert(user.email, user.name, "Deleted", deletedJob.title, deletedJob.company, deletedJob.openDate, deletedJob.closeDate)
         )
       );
@@ -321,11 +236,80 @@ export const deleteJob = async (req, res) => {
       await sendCompanyActionAlert(companyAccount.email, companyAccount.name, "Job", "Deleted", deletedJob.title, deletedJob.openDate, deletedJob.closeDate);
     }
 
-    // Remove stale notifications related to this deleted job
+    // Remove stale notifications and applications related to this deleted job
     await Notification.deleteMany({ type: "job", referenceId: deletedJob._id });
+    await Application.deleteMany({ jobId: deletedJob._id });
 
     res.status(200).json({ message: "Job deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Failed to delete job", error: error.message });
+  }
+};
+
+// ================== APPLY TO JOB ==================
+export const applyToJob = async (req, res) => {
+  try {
+    if (req.user && req.user.role !== "user") {
+      return res.status(403).json({ message: "Only registered job seekers can apply for jobs." });
+    }
+
+    const job = await Job.findById(req.params.id);
+    if (!job) return res.status(404).json({ message: "Job not found" });
+
+    const user = await User.findById(req.user?.id || req.body.userId);
+    if (!user) return res.status(404).json({ message: "User profile not found. Please log in as a job seeker." });
+
+    // Check if already applied
+    const existingApp = await Application.findOne({ jobId: job._id, userId: user._id });
+    if (existingApp) {
+      return res.status(400).json({ message: "You have already applied for this job." });
+    }
+
+    // Save Application record
+    const application = new Application({
+      jobId: job._id,
+      userId: user._id,
+      companyName: job.company,
+      status: "pending",
+    });
+    await application.save();
+
+    // Send confirmation email to the user
+    if (user.emailNotifications !== false) {
+      await sendWorkflowEmail(
+        user.email,
+        user.name,
+        "Job Application Submitted Successfully",
+        `You have successfully applied for the position of **${job.title}** at **${job.company}**.\n\nWe will notify you if your application is reviewed.`
+      );
+    }
+
+    // Send notification to company
+    const companyAccount = await Company.findOne({ name: job.company });
+    if (companyAccount) {
+      // Send an email to the company
+      await sendWorkflowEmail(
+        companyAccount.email,
+        companyAccount.name,
+        "New Job Application Received",
+        `A candidate (${user.name}) has applied for the job listing **"${job.title}"**.\n\nYou can review their profile and qualifications on the platform.`
+      );
+
+      // Save notification and emit socket
+      const notification = new Notification({
+        userId: companyAccount._id,
+        type: "job",
+        title: "New Job Application",
+        message: `Candidate ${user.name} has applied for "${job.title}".`,
+        referenceId: job._id,
+        read: false,
+      });
+      await notification.save();
+      emitNotification(companyAccount._id, notification);
+    }
+
+    res.status(200).json({ message: "Applied successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to apply for job", error: error.message });
   }
 };

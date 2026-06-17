@@ -30,7 +30,6 @@ type Job = {
   positionType?: "full-time" | "part-time" | "internship";
   paymentType?: "paid" | "unpaid";
   location?: string;
-  approvalStatus: "pending" | "approved" | "rejected";
   rejectionReason?: string;
 };
 
@@ -66,7 +65,10 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 // ================== API ==================
 const fetchJobs = async (): Promise<Job[]> => {
-  const res = await axios.get(API_BASE);
+  const token = localStorage.getItem("token");
+  const res = await axios.get(API_BASE, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
   return Array.isArray(res.data) ? res.data : [];
 };
 
@@ -109,7 +111,6 @@ const AdminJobsPage: React.FC = () => {
   const [filterLocation, setFilterLocation] = useState("");
   const [filterJobType, setFilterJobType] = useState("");
   const [filterPaymentType, setFilterPaymentType] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("pending");
   const [filterQualification, setFilterQualification] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState<NewJob>({
@@ -121,7 +122,6 @@ const AdminJobsPage: React.FC = () => {
     closeDate: "",
     category: "",
     location: "",
-    approvalStatus: "pending",
   });
 
   const { data: jobs = [], isLoading, isError } = useQuery<Job[]>({
@@ -200,7 +200,6 @@ const AdminJobsPage: React.FC = () => {
     const matchesLocation = filterLocation ? job.location === filterLocation : true;
     const matchesJobType = filterJobType ? job.positionType === filterJobType : true;
     const matchesPaymentType = filterPaymentType ? job.paymentType === filterPaymentType : true;
-    const matchesStatus = filterStatus === "all" ? true : job.approvalStatus === filterStatus;
     const matchesQualification = filterQualification.length > 0 ? filterQualification.some(q => job.qualification && job.qualification.includes(q)) : true;
     const matchesSearch =
       searchTerm.trim() === "" ||
@@ -212,7 +211,6 @@ const AdminJobsPage: React.FC = () => {
       matchesLocation &&
       matchesJobType &&
       matchesPaymentType &&
-      matchesStatus &&
       matchesQualification &&
       matchesSearch
     );
@@ -241,16 +239,6 @@ const AdminJobsPage: React.FC = () => {
           className="border rounded-lg p-3 flex-1 bg-white shadow-sm focus:ring-2 focus:ring-blue-400"
         />
         <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="border rounded-lg p-3 bg-white shadow-sm font-bold text-blue-800 focus:ring-2 focus:ring-blue-400"
-        >
-          <option value="pending">⏳ Pending Review</option>
-          <option value="approved">✅ Approved/Live</option>
-          <option value="rejected">❌ Rejected</option>
-          <option value="all">🌐 All Statuses</option>
-        </select>
-        <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
           className="border rounded-lg p-3 bg-white shadow-sm focus:ring-2 focus:ring-blue-400"
@@ -275,7 +263,6 @@ const AdminJobsPage: React.FC = () => {
               location: filterLocation || "",
               positionType: "full-time",
               paymentType: "paid",
-              approvalStatus: "approved", // manual add by admin defaults to approved
             });
           }}
           className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-5 py-3 rounded-xl font-medium shadow-md hover:shadow-lg flex items-center gap-2 transition-transform hover:scale-105"
@@ -294,21 +281,12 @@ const AdminJobsPage: React.FC = () => {
           {filteredJobs.map((job) => (
             <div
               key={job._id}
-              className={`bg-white/90 backdrop-blur-md border ${job.approvalStatus === 'pending' ? 'border-yellow-300 ring-2 ring-yellow-400/20' : 'border-gray-200'} shadow-md rounded-2xl p-6 transition hover:shadow-xl group`}
+              className={`bg-white/90 backdrop-blur-md border border-gray-200 shadow-md rounded-2xl p-6 transition hover:shadow-xl group`}
             >
               <div className="flex justify-between items-start mb-3">
                 <h2 className="text-xl font-bold text-gray-900 group-hover:text-blue-700 transition-colors">
                   {job.title}
                 </h2>
-                <span
-                  className={`text-[10px] px-2 py-1 rounded-full font-black uppercase tracking-tighter ${
-                    job.approvalStatus === "approved" ? "bg-green-100 text-green-700" :
-                    job.approvalStatus === "rejected" ? "bg-red-100 text-red-700" :
-                    "bg-yellow-100 text-yellow-700 animate-pulse"
-                  }`}
-                >
-                  {job.approvalStatus}
-                </span>
               </div>
 
               <div className="space-y-2 mb-4">
@@ -355,61 +333,14 @@ const AdminJobsPage: React.FC = () => {
                 </Linkify>
               </div>
 
-              {job.approvalStatus === "pending" ? (
-                  <div className="flex flex-col gap-2">
-                      <div className="flex gap-2">
-                        <button
-                            onClick={() => {
-                                if(window.confirm(`Approve "${job.title}"?`)) approveMutation.mutate(job._id);
-                            }}
-                            className="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700 transition text-xs shadow-sm"
-                        >
-                            Approve Posting
-                        </button>
-                        <button
-                            onClick={() => {
-                                const reason = window.prompt("Reason for rejection:");
-                                if(reason) rejectMutation.mutate({ id: job._id, reason });
-                            }}
-                            className="flex-1 bg-white text-red-600 border border-red-200 py-2 rounded-lg font-bold hover:bg-red-50 transition text-xs shadow-sm"
-                        >
-                            Reject
-                        </button>
-                      </div>
-                      <button 
-                        onClick={() => {
-                            setEditingJob(job);
-                            setFormData({ ...job, qualification: job.qualification || [] });
-                            setShowForm(true);
-                        }}
-                        className="w-full bg-gray-100 text-gray-700 py-2 rounded-lg text-xs font-bold hover:bg-gray-200 transition"
-                      >
-                          Review & Edit Job Info
-                      </button>
-                  </div>
-              ) : (
-                <div className="flex gap-2 border-t pt-4">
-                  <button
-                    onClick={() => {
-                      setEditingJob(job);
-                      setFormData({
-                        ...job,
-                        qualification: job.qualification || [],
-                      });
-                      setShowForm(true);
-                    }}
-                    className="flex-1 flex items-center justify-center gap-1 bg-blue-50 text-blue-600 py-2 rounded-lg hover:bg-blue-100 transition text-xs font-bold"
-                  >
-                    <Edit className="w-3 h-3" /> Edit
-                  </button>
-                  <button
-                    onClick={() => { if(window.confirm("Delete job?")) deleteMutation.mutate(job._id); }}
-                    className="flex-1 flex items-center justify-center gap-1 bg-red-50 text-red-600 py-2 rounded-lg hover:bg-red-100 transition text-xs font-bold"
-                  >
-                    <Trash2 className="w-3 h-3" /> Delete
-                  </button>
-                </div>
-              )}
+              <div className="flex gap-2 border-t pt-4">
+                <button
+                  onClick={() => { if(window.confirm("Delete job?")) deleteMutation.mutate(job._id); }}
+                  className="flex-1 flex items-center justify-center gap-1 bg-red-50 text-red-600 py-2 rounded-lg hover:bg-red-100 transition text-xs font-bold"
+                >
+                  <Trash2 className="w-3 h-3" /> Delete
+                </button>
+              </div>
             </div>
           ))}
         </div>

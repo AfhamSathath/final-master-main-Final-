@@ -81,7 +81,7 @@ export const createCourse = async (req, res) => {
       }
 
       await Promise.all(
-        matchedUsers.map((user) => {
+        matchedUsers.filter(u => u.emailNotifications !== false).map((user) => {
             if (isClosingSoon) {
                return sendClosingSoonScenarioAlert(user.email, user.name, "Course Enrollment", name, institution, closeDate);
             } else {
@@ -214,7 +214,7 @@ export const updateCourse = async (req, res) => {
       }
 
       await Promise.all(
-        matchedUsers.map((user) => {
+        matchedUsers.filter(u => u.emailNotifications !== false).map((user) => {
           if (isClosingSoon) {
             return sendClosingSoonScenarioAlert(user.email, user.name, "Course Enrollment", updatedCourse.name, updatedCourse.institution, updatedCourse.closeDate, true);
           } else {
@@ -261,7 +261,7 @@ export const deleteCourse = async (req, res) => {
 
       const matchedUsers = await User.find(query);
       await Promise.all(
-        matchedUsers.map((user) =>
+        matchedUsers.filter(u => u.emailNotifications !== false).map((user) =>
           sendCourseAlert(user.email, user.name, "Deleted", deletedCourse.name, deletedCourse.institution, deletedCourse.closeDate)
         )
       );

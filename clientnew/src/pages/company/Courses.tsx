@@ -1,4 +1,3 @@
-// src/pages/company/CompanyCoursesPage.tsx
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
@@ -266,11 +265,10 @@ const CompanyCoursesPage: React.FC = () => {
             });
           }}
           disabled={!isVerified}
-          className={`${
-            isVerified 
-            ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg transition-transform hover:scale-105" 
-            : "bg-gray-400 cursor-not-allowed opacity-70"
-          } text-white px-5 py-3 rounded-xl font-medium shadow-md flex items-center gap-2`}
+          className={`${isVerified
+              ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg transition-transform hover:scale-105"
+              : "bg-gray-400 cursor-not-allowed opacity-70"
+            } text-white px-5 py-3 rounded-xl font-medium shadow-md flex items-center gap-2`}
         >
           <PlusCircle className="w-5 h-5" /> Add Course
         </button>
@@ -291,7 +289,7 @@ const CompanyCoursesPage: React.FC = () => {
               </h3>
               <div className="mt-2 text-sm text-amber-700">
                 <p>
-                  {profile.verificationStatus === "pending" 
+                  {profile.verificationStatus === "pending"
                     ? "Your account is currently waiting for admin verification. You can view your courses once they are approved, but you cannot post new ones yet."
                     : `Your account verification was rejected. Reason: ${profile.rejectionReason || "None provided"}. Please contact support.`}
                 </p>
@@ -316,9 +314,8 @@ const CompanyCoursesPage: React.FC = () => {
                   {course.name}
                 </h2>
                 <span
-                  className={`text-xs px-2 py-1 rounded-full font-semibold ${
-                    CATEGORY_COLORS[course.category] || "bg-gray-100 text-gray-800"
-                  }`}
+                  className={`text-xs px-2 py-1 rounded-full font-semibold ${CATEGORY_COLORS[course.category] || "bg-gray-100 text-gray-800"
+                    }`}
                 >
                   {course.category}
                 </span>
@@ -362,7 +359,7 @@ const CompanyCoursesPage: React.FC = () => {
                   </span>
                 </div>
               </div>
-              
+
               <div className="text-gray-700 dark:text-gray-300 text-sm mb-4 border-t border-gray-200 dark:border-gray-700 pt-2 break-words">
                 <Linkify
                   tagName="div"
@@ -497,6 +494,23 @@ const CompanyCoursesPage: React.FC = () => {
                 {PAYMENT_TYPE_OPTIONS.map((type) => (
                   <option key={type} value={type}>
                     {type}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={formData.location || ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    location: e.target.value,
+                  })
+                }
+                className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Select District</option>
+                {SRI_LANKA_DISTRICTS.map((district) => (
+                  <option key={district} value={district}>
+                    {district}
                   </option>
                 ))}
               </select>
