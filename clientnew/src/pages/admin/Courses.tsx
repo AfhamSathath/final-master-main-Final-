@@ -31,6 +31,7 @@ type Course = {
 
   courseType?: "full-time" | "part-time";
   paymentType?: "paid" | "unpaid";
+  closeDate?: string;
   createdAt: string;
 };
 
@@ -115,6 +116,7 @@ const AdminCoursesPage: React.FC = () => {
     location: "",
     courseType: "full-time",
     paymentType: "paid",
+    closeDate: "",
   });
   const [companies, setCompanies] = useState<Company[]>([]);
 
@@ -255,6 +257,7 @@ const AdminCoursesPage: React.FC = () => {
               category: "",
               courseType: "full-time",
               paymentType: "paid",
+              closeDate: "",
             });
           }}
           className="bg-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-blue-800 flex items-center gap-2 transition"
@@ -321,6 +324,13 @@ const AdminCoursesPage: React.FC = () => {
                   <Clock className="w-4 h-4 text-purple-600" />
                   <span className="text-sm bg-purple-50 dark:bg-purple-900 text-purple-800 dark:text-purple-100 px-2 py-1 rounded-md font-medium">
                     Duration: {course.duration || "N/A"}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-red-600" />
+                  <span className="text-sm bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-100 px-2 py-1 rounded-md font-medium">
+                    Deadline: {course.closeDate ? new Date(course.closeDate).toLocaleDateString() : "No Deadline"}
                   </span>
                 </div>
               </div>
@@ -448,6 +458,13 @@ const AdminCoursesPage: React.FC = () => {
                   </option>
                 ))}
               </select>
+              <input
+                type="date"
+                placeholder="Enrollment Deadline"
+                value={formData.closeDate ? formData.closeDate.substring(0, 10) : ""}
+                onChange={(e) => setFormData({ ...formData, closeDate: e.target.value })}
+                className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
+              />
               <select
                 value={formData.location}
                 onChange={(e) =>

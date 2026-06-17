@@ -28,6 +28,7 @@ type Course = {
   location?: string;
   courseType?: "full-time" | "part-time";
   paymentType?: "paid" | "unpaid";
+  closeDate?: string;
   createdAt: string;
 };
 
@@ -97,6 +98,7 @@ const CompanyCoursesPage: React.FC = () => {
     location: "",
     courseType: "full-time",
     paymentType: "paid",
+    closeDate: "",
   });
   const [filterCategory, setFilterCategory] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
@@ -262,6 +264,7 @@ const CompanyCoursesPage: React.FC = () => {
               location: "",
               courseType: "full-time",
               paymentType: "paid",
+              closeDate: "",
             });
           }}
           disabled={!isVerified}
@@ -358,6 +361,12 @@ const CompanyCoursesPage: React.FC = () => {
                     Duration: {course.duration || "N/A"}
                   </span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-red-600" />
+                  <span className="text-sm bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-100 px-2 py-1 rounded-md font-medium">
+                    Deadline: {course.closeDate ? new Date(course.closeDate).toLocaleDateString() : "No Deadline"}
+                  </span>
+                </div>
               </div>
 
               <div className="text-gray-700 dark:text-gray-300 text-sm mb-4 border-t border-gray-200 dark:border-gray-700 pt-2 break-words">
@@ -387,6 +396,7 @@ const CompanyCoursesPage: React.FC = () => {
                       category: course.category,
                       courseType: course.courseType || "full-time",
                       paymentType: course.paymentType || "paid",
+                      closeDate: course.closeDate || "",
                     });
                     setShowForm(true);
                   }}
@@ -497,6 +507,13 @@ const CompanyCoursesPage: React.FC = () => {
                   </option>
                 ))}
               </select>
+              <input
+                type="date"
+                placeholder="Enrollment Deadline"
+                value={formData.closeDate ? formData.closeDate.substring(0, 10) : ""}
+                onChange={(e) => setFormData({ ...formData, closeDate: e.target.value })}
+                className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
+              />
               <select
                 value={formData.location || ""}
                 onChange={(e) =>

@@ -21,6 +21,7 @@ interface Course {
   courseType?: "full-time" | "part-time";
   paymentType?: "paid" | "unpaid";
   location?: string;
+  closeDate?: string;
 }
 
 const COURSE_TYPE_OPTIONS = ["full-time", "part-time"];
@@ -226,6 +227,11 @@ const CoursePage: React.FC = () => {
                   {course.duration && (
                     <p className="text-sm text-gray-500 mb-1">
                       Duration: {course.duration}
+                    </p>
+                  )}
+                  {course.closeDate && (
+                    <p className="text-sm font-semibold text-red-600 mb-1">
+                      Deadline: {new Date(course.closeDate).toLocaleDateString()}
                     </p>
                   )}
                   {course.qualification && course.qualification.length > 0 && (
