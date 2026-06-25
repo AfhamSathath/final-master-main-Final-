@@ -4,8 +4,10 @@ import Admin from "../models/admin.js";
 import Notification from "../models/Notification.js";
 import bcrypt from "bcryptjs";
 import generateToken from "../src/utils/generateToken.js";
-import { sendWorkflowEmail, sendCompanyVerificationAlert, sendAccountStatusAlert, sendProfileUpdatedAlert, sendAdminNewCompanyNotification } from "../src/utils/otpService.js";
+import { sendWorkflowEmail, sendCompanyVerificationAlert, sendAccountStatusAlert, sendProfileUpdatedAlert, sendAdminNewCompanyNotification, sendAdminOverrideAlert, sendDocumentAccessAlert } from "../src/utils/otpService.js";
 import { emitNotification } from "../src/utils/socketManager.js";
+import path from "path";
+import fs from "fs";
 
 // ================= REGISTER =================
 export const register = async (req, res) => {
@@ -268,7 +270,110 @@ export const rejectCompany = async (req, res) => {
   }
 };
 
+export const downloadCompanyDocument = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const company = await Company.findById(id);
+    if (!company) return res.status(404).json({ message: "Company not found" });
+
+    if (!company.documents || company.documents.length === 0) {
+      return res.status(404).json({ message: "No documents found for this company" });
+    }
+
+    const documentName = company.documents[0]; // Assuming the first document is the BR
+    const filePath = path.join(process.cwd(), "uploads", documentName);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "Document file not found on server" });
+    }
+
+    // ✅ Send Document Access Alert (Email + Socket)
+    await sendDocumentAccessAlert(company.email, company.name);
+
+    res.download(filePath, documentName, (err) => {
+      if (err) {
+        console.error("File download error:", err);
+      }
+    });
+  } catch (error) {
+    console.error("Download Company Document error:", error);
+    res.status(500).json({ message: "Failed to download document" });
+  }
+};
+
 // ================= USER MANAGEMENT (ADMIN) =================
+
+export const updateUserAccountAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, role, qualificationCategory, qualification, contactNumber, location, password } = req.body;
+
+    let updatedData = { name, email, role, qualificationCategory, qualification, contactNumber, location };
+
+    if (password) {
+      updatedData.password = await bcrypt.hash(password, 10);
+    }
+
+    const user = await User.findByIdAndUpdate(id, updatedData, { new: true }).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // ✅ Send Admin Override Alert (Email + Socket)
+    await sendAdminOverrideAlert(user.email, user.name, "User", "UPDATE", "Your profile information or settings were updated by an administrator.");
+
+    res.status(200).json({ message: "User updated successfully by admin", user });
+  } catch (error) {
+    console.error("Admin Update User error:", error);
+    res.status(500).json({ message: "Failed to update user", error: error.message });
+  }
+};
+
+export const updateCompanyAccountAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, location, email, contactNumber, regNumber, password, address } = req.body;
+
+    const updatedData = { name, location, email, contactNumber, regNumber, address };
+    if (password) updatedData.password = await bcrypt.hash(password, 10);
+
+    const company = await Company.findByIdAndUpdate(id, updatedData, { new: true }).select("-password");
+    if (!company) return res.status(404).json({ message: "Company not found" });
+
+    // ✅ Send Admin Override Alert (Email + Socket)
+    await sendAdminOverrideAlert(company.email, company.name, "Company", "UPDATE", "Your company profile information or settings were updated by an administrator.");
+
+    res.status(200).json({ message: "Company updated successfully by admin", company });
+  } catch (error) {
+    console.error("Admin Update Company error:", error);
+    res.status(500).json({ message: "Failed to update company", error: error.message });
+  }
+};
+
+export const deleteCompanyAccountAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const company = await Company.findByIdAndDelete(id);
+    if (!company) return res.status(404).json({ message: "Company not found" });
+
+    // Notify company
+    await sendAccountStatusAlert(company.email, company.name, "deleted");
+    
+    // Also emit a socket notification if possible (might not deliver if deleted, but attempt)
+    emitNotification(company._id.toString(), {
+      _id: "override-" + new Date().getTime(),
+      userId: company._id,
+      type: "system",
+      title: "Account Deleted",
+      message: "Your company account has been deleted by an administrator.",
+      createdAt: new Date().toISOString(),
+      read: false
+    });
+
+    res.status(200).json({ message: "Company deleted successfully by admin" });
+  } catch (error) {
+    console.error("Admin Delete Company error:", error);
+    res.status(500).json({ message: "Failed to delete company", error: error.message });
+  }
+};
 
 export const suspendUser = async (req, res) => {
   try {
@@ -281,6 +386,17 @@ export const suspendUser = async (req, res) => {
 
     // ✅ Send Account Suspension Email
     await sendAccountStatusAlert(user.email, user.name, "suspended");
+    
+    // ✅ Send Real-time Socket Notification
+    emitNotification(user._id.toString(), {
+      _id: "override-" + new Date().getTime(),
+      userId: user._id,
+      type: "system",
+      title: "Account Suspended",
+      message: "Your account has been suspended by an administrator.",
+      createdAt: new Date().toISOString(),
+      read: false
+    });
 
     res.status(200).json({ message: "User suspended", user });
   } catch (error) {
@@ -297,6 +413,17 @@ export const deleteUserAccount = async (req, res) => {
 
     // ✅ Send Account Deletion Email
     await sendAccountStatusAlert(user.email, user.name, "deleted");
+
+    // ✅ Send Real-time Socket Notification
+    emitNotification(user._id.toString(), {
+      _id: "override-" + new Date().getTime(),
+      userId: user._id,
+      type: "system",
+      title: "Account Deleted",
+      message: "Your account has been deleted by an administrator.",
+      createdAt: new Date().toISOString(),
+      read: false
+    });
 
     res.status(200).json({ message: "User deleted" });
   } catch (error) {

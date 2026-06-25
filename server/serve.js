@@ -11,6 +11,7 @@ import User from "./models/User.js";
 import startNotificationScheduler from "./src/utils/notificationScheduler.js";
 import { initSocketManager } from "./src/utils/socketManager.js";
 import notificationRoutes from "./Routes/notificationRoutes.js";
+import fs from "fs";
 
 // Routes
 import userRoutes from "./Routes/userRoutes.js";
@@ -64,6 +65,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const clientDistPath = path.resolve(__dirname, "../clientnew/dist");
+const clientIndexPath = path.join(clientDistPath, "index.html");
+const hasClientBuild = fs.existsSync(clientIndexPath);
 
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -78,12 +82,22 @@ app.use(
   })
 );
 
+if (hasClientBuild) {
+  app.use(express.static(clientDistPath));
+}
+
 
 
 // ========================
 // Routes
 // ========================
-app.get("/", (req, res) => res.send("API running successfully"));
+app.get("/", (req, res) => {
+  if (hasClientBuild) {
+    return res.sendFile(clientIndexPath);
+  }
+
+  return res.send("API running successfully");
+});
 
 app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
@@ -96,6 +110,12 @@ app.use("/api/notifications", notificationRoutes);
 
 app.use("/api/verify-company", verifyCompanyRoute);
 app.use("/api/check-duplicate", duplicateCheckRouter);
+
+if (hasClientBuild) {
+  app.get(/^\/(?!api\/|uploads\/).*/, (req, res) => {
+    res.sendFile(clientIndexPath);
+  });
+}
 
 // ========================
 // Auth Register Route

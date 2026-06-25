@@ -328,7 +328,14 @@ const AdminJobsPage: React.FC = () => {
               </div>
 
               <div className="text-gray-600 text-sm mb-6 border-t pt-3 line-clamp-3">
-                <Linkify options={{ target: "_blank", className: "text-blue-600 hover:underline" }}>
+                  <Linkify
+                  tagName="div"
+                  options={{
+                    target: "_blank",
+                    rel: "noopener noreferrer",
+                    className: "text-blue-600 hover:underline",
+                  }}
+                >
                   {job.description || "No description provided."}
                 </Linkify>
               </div>

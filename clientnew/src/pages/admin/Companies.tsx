@@ -13,7 +13,8 @@ import {
   FileText,
   X,
   Activity,
-  ExternalLink
+  ExternalLink,
+  Download
 } from "lucide-react";
 
 type Company = {
@@ -245,33 +246,44 @@ const Companies: React.FC = () => {
                   </div>
                   {selectedCompany.documents?.[0] ? (
                     <div className="w-full space-y-3">
-                      <a
-                        href={`http://localhost:5000/uploads/${selectedCompany.documents[0]}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-indigo-100 group hover:border-indigo-300 transition-all shadow-sm hover:shadow-md"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-indigo-50 rounded-xl group-hover:bg-indigo-100 transition-colors">
-                            {selectedCompany.documents[0].toLowerCase().endsWith('.pdf') ? (
-                              <FileText className="w-5 h-5 text-red-500" />
-                            ) : (
-                              <Activity className="w-5 h-5 text-indigo-600" />
-                            )}
+                      <div className="flex gap-2">
+                        <a
+                          href={`http://localhost:5000/uploads/${selectedCompany.documents[0]}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-between p-4 bg-white rounded-2xl border border-indigo-100 group hover:border-indigo-300 transition-all shadow-sm hover:shadow-md"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-indigo-50 rounded-xl group-hover:bg-indigo-100 transition-colors">
+                              {selectedCompany.documents[0].toLowerCase().endsWith('.pdf') ? (
+                                <FileText className="w-5 h-5 text-red-500" />
+                              ) : (
+                                <Activity className="w-5 h-5 text-indigo-600" />
+                              )}
+                            </div>
+                            <div className="text-left">
+                              <span className="text-sm font-black text-slate-800 block leading-none">BR Certificate</span>
+                              <span className="text-[10px] text-slate-400 font-bold uppercase mt-1 block">
+                                {selectedCompany.documents[0].toLowerCase().endsWith('.pdf') ? 'Digital PDF File' : 'Image Document'}
+                              </span>
+                            </div>
                           </div>
-                          <div className="text-left">
-                            <span className="text-sm font-black text-slate-800 block leading-none">BR Certificate</span>
-                            <span className="text-[10px] text-slate-400 font-bold uppercase mt-1 block">
-                              {selectedCompany.documents[0].toLowerCase().endsWith('.pdf') ? 'Digital PDF File' : 'Image Document'}
-                            </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">PREVIEW</span>
+                            <ExternalLink className="w-4 h-4 text-indigo-400 group-hover:text-indigo-600 transition-colors" />
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">PREVIEW</span>
-                          <ExternalLink className="w-4 h-4 text-indigo-400 group-hover:text-indigo-600 transition-colors" />
-                        </div>
-                      </a>
-                      <p className="text-[10px] text-slate-400 italic text-center">Click to open the registration certificate in a secure viewer tab.</p>
+                        </a>
+                        
+                        <a
+                          href={`${ADMIN_API}/companies/${selectedCompany._id}/document`}
+                          download
+                          className="flex items-center justify-center px-5 bg-indigo-600 text-white rounded-2xl shadow-sm hover:bg-indigo-700 transition"
+                          title="Download Document (Notifies Company)"
+                        >
+                          <Download className="w-5 h-5" />
+                        </a>
+                      </div>
+                      <p className="text-[10px] text-slate-400 italic text-center">Click preview to view in browser, or download to save a copy locally.</p>
                     </div>
                   ) : (
                     <div className="w-full p-4 bg-slate-100/50 rounded-2xl border border-dashed border-slate-200 text-[10px] font-bold text-slate-400">

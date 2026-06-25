@@ -753,6 +753,138 @@ export async function sendSubscribeConfirmation(toEmail, recipientName) {
 
   return await sendWorkflowEmail(toEmail, recipientName, subject, message);
 }
+/**
+ * Send specialized Admin Override alert to Users or Companies.
+ * This triggers when an Administrator updates/modifies user data without their direct initiation.
+ */
+export async function sendAdminOverrideAlert(toEmail, recipientName, entityType, action, details = null) {
+  try {
+    const subject = `⚠️ Notice: Administrative Action on your ${entityType} Account`;
+    
+    let message = `Dear **${recipientName}**,\n\n`;
+    message += `This is an automated notification to inform you that an **Administrator** has performed a **${action}** action on your ${entityType} account.\n\n`;
+    
+    if (details) {
+      message += `**Details of Change:**\n${details}\n\n`;
+    }
+    
+    message += `If you have concerns regarding this change or believe it was made in error, please contact our support desk immediately.\n\n`;
+    message += `Thank you for your understanding.`;
+
+    const mailOptions = {
+      from: process.env.SMTP_FROM || smtpUser,
+      to: toEmail,
+      subject: subject,
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 0; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+          <div style="background: #f39c12; padding: 25px 20px; text-align: center; color: white;">
+            <div style="font-size: 32px; margin-bottom: 10px;">🛡️</div>
+            <h2 style="margin: 0; font-size: 22px; font-weight: 700;">Administrative Notice</h2>
+          </div>
+          <div style="padding: 30px; background: white;">
+            <div style="font-size: 15px; color: #444; line-height: 1.6;">
+              ${message.replace(/\n/g, '<br>')}
+            </div>
+            <div style="margin-top: 25px; text-align: center;">
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:8081'}/login" 
+                 style="background: #f39c12; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                Review Account Status
+              </a>
+            </div>
+          </div>
+          <div style="background: #f8f9fa; padding: 15px; text-align: center; border-top: 1px solid #eee;">
+             <p style="font-size: 11px; color: #999; margin: 0;">Automated System Broadcast - QJC Security</p>
+          </div>
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    
+    // ✅ Emit real-time notification to the user/company using socket
+    if (io) {
+      // Find the user/company to get their ID for socket emission
+      const User = (await import("../../models/User.js")).default;
+      const Company = (await import("../../models/Company.js")).default;
+      
+      let account = await User.findOne({ email: toEmail }) || await Company.findOne({ email: toEmail });
+      if (account) {
+        io.to(account._id.toString()).emit("newNotification", {
+          _id: "override-" + new Date().getTime(),
+          userId: account._id,
+          type: "system",
+          title: `Administrative Notice: ${action}`,
+          message: `An Administrator has modified your account. Details: ${details || "Updated profile information."}`,
+          createdAt: new Date().toISOString(),
+          read: false
+        });
+      }
+    }
+
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error("Admin Override Alert Error:", error);
+    return { success: false };
+  }
+}
+/**
+ * Send specialized alert when Admin views/downloads a company's BR Document.
+ */
+export async function sendDocumentAccessAlert(toEmail, companyName) {
+  try {
+    const subject = `Notice: Official Document Accessed by Administrator`;
+    
+    let message = `Dear **${companyName}**,\n\n`;
+    message += `This is an automated security notification to inform you that an **Administrator** has accessed, viewed, or downloaded your official Business Registration (BR) certificate from the system.\n\n`;
+    message += `This action is typically performed during the verification process or during routine administrative audits. If your account is currently pending verification, our team is currently reviewing your application.\n\n`;
+    message += `No action is required on your part.`;
+
+    const mailOptions = {
+      from: process.env.SMTP_FROM || smtpUser,
+      to: toEmail,
+      subject: subject,
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 0; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+          <div style="background: #17a2b8; padding: 25px 20px; text-align: center; color: white;">
+            <div style="font-size: 32px; margin-bottom: 10px;">👁️</div>
+            <h2 style="margin: 0; font-size: 22px; font-weight: 700;">Document Access Notice</h2>
+          </div>
+          <div style="padding: 30px; background: white;">
+            <div style="font-size: 15px; color: #444; line-height: 1.6;">
+              ${message.replace(/\n/g, '<br>')}
+            </div>
+          </div>
+          <div style="background: #f8f9fa; padding: 15px; text-align: center; border-top: 1px solid #eee;">
+             <p style="font-size: 11px; color: #999; margin: 0;">Automated System Broadcast - QJC Security</p>
+          </div>
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    
+    if (io) {
+      const Company = (await import("../../models/Company.js")).default;
+      const company = await Company.findOne({ email: toEmail });
+      if (company) {
+        io.to(company._id.toString()).emit("newNotification", {
+          _id: "doc-access-" + new Date().getTime(),
+          userId: company._id,
+          type: "system",
+          title: `Document Accessed`,
+          message: `An Administrator has viewed or downloaded your BR Certificate.`,
+          createdAt: new Date().toISOString(),
+          read: false
+        });
+      }
+    }
+
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error("Document Access Alert Error:", error);
+    return { success: false };
+  }
+}
 
 export { transporter };
 export default sendOTP;
